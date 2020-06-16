@@ -6,7 +6,8 @@
 static Mem8* dereference(Mem8& high, Mem8& low)
 {
     uint16_t address = low.get() | high.get() << 8;
-    low.markOrigin(MARK_PTR);
+    high.markOrigin(MARK_PTR_HIGH);
+    low.markOrigin(MARK_PTR_LOW);
     return &mm::get(address);
 }
 

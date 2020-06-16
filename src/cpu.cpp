@@ -187,7 +187,8 @@ void Cpu::execute(const Opcode& opcode)
     case Opcode::JRNC: if (!F.C) { pc += static_cast<int8_t>(opcode.dst_l->get()); cycles += 4; } break;
 
     case Opcode::JP:
-        opcode.dst_l->markOrigin(MARK_PTR);
+        opcode.dst_l->markOrigin(MARK_PTR_LOW);
+        opcode.dst_h->markOrigin(MARK_PTR_HIGH);
         pc = (opcode.dst_h->get() << 8) | opcode.dst_l->get();
         break;
     case Opcode::JPZ: if (F.Z) { pc = (opcode.dst_h->get() << 8) | opcode.dst_l->get(); cycles += 4; } break;

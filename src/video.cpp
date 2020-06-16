@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <stdio.h>
 #include <algorithm>
+#include <cmath>
 #include "video.h"
 #include "cpu.h"
 #include "mm.h"
@@ -188,20 +189,6 @@ Mem8& Video::getVRam(uint16_t address)
     return vram[address];
 }
 
-uint8_t Video::DmaReg::get() const
-{
-    return 0x00;
-}
-
-void Video::DmaReg::setImpl(uint8_t value)
-{
-    uint16_t addr = value << 8;
-    for(int n=0; n<0xA0; n++)
-    {
-        video.oam[n].set(mm::get(addr++).get());
-    }
-}
-
 uint8_t Video::PaletteReg::get() const
 {
     return value;
@@ -236,10 +223,36 @@ void Video::ColorPaletteReg::setImpl(uint8_t value)
 
     uint16_t color16 = data[idx & 0x3E] | (data[idx | 0x01] << 8);
 
-    uint32_t r = (color16 >> 0) & 0x1F;
-    uint32_t g = (color16 >> 5) & 0x1F;
-    uint32_t b = (color16 >> 10) & 0x1F;
-    uint32_t w = r + g + b;
-    palette[idx / 2] = (r << 19) | (g << 11) | (b << 3);
-    palette[idx / 2] |= (w << 16) | (w << 8) | (w << 0);
+    double r = double((color16 >> 0) & 0x1F) / double(0x1F);
+    double g = double((color16 >> 5) & 0x1F) / double(0x1F);
+    double b = double((color16 >> 10) & 0x1F) / double(0x1F);
+
+    const double target_gamma = 2.2;
+    const double display_gamma = 2.2;
+    r = std::pow(r, target_gamma);
+    g = std::pow(g, target_gamma);
+    b = std::pow(b, target_gamma);
+
+    const double rr = 0.87;
+    const double gg = 0.66;
+    const double bb = 0.79;
+    const double rg = 0.115;
+    const double rb = 0.14;
+    const double gr = 0.18;
+    const double gb = 0.07;
+    const double br =-0.05;
+    const double bg = 0.225;
+
+    double r2 = r * rr + g * gr + b * br;
+    double g2 = r * rg + g * gg + b * bg;
+    double b2 = r * rb + g * gb + b * bb;
+
+    int32_t ir = std::pow(r2, 1.0 / display_gamma) * 255;
+    int32_t ig = std::pow(g2, 1.0 / display_gamma) * 255;
+    int32_t ib = std::pow(b2, 1.0 / display_gamma) * 255;
+    ir = std::max(0, std::min(255, ir));
+    ig = std::max(0, std::min(255, ig));
+    ib = std::max(0, std::min(255, ib));
+
+    palette[idx / 2] = (ir << 16) | (ig << 8) | (ib << 0);
 }

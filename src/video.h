@@ -13,11 +13,6 @@ public:
         uint8_t get() const override { return value; }
         void setImpl(uint8_t value) override { this->value = value; }
     };
-    class DmaReg : public Mem8
-    {
-        uint8_t get() const override;
-        void setImpl(uint8_t value) override;
-    };
     class PaletteReg : public Mem8
     {
     public:
@@ -46,7 +41,6 @@ public:
     VideoReg SCX; //0xFF43
     VideoReg LY;  //0xFF44
     VideoReg LYC; //0xFF45
-    DmaReg DMA; //0xFF45
     PaletteReg BGP; //0xFF47
     PaletteReg OBP0; //0xFF48
     PaletteReg OBP1; //0xFF49

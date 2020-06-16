@@ -26,6 +26,7 @@ int main(int argc, char** argv)
     cpu.gbc = card.getRom(0x143).get() & 0x80;
     if (true)
     {
+        //Skip the bootrom and setup the defaults as they would be after the bootrom.
         cpu.A.set(cpu.gbc ? 0x11 : 0x01);
         cpu.F.set(0xB0);
         cpu.B.set(0x00);
@@ -107,6 +108,6 @@ int main(int argc, char** argv)
     {
         printf("%04x: %016llx\n", n, card.getBoot(n).used_as);
     }
-    //system("pause");
+    system("pause");
     return 0;
 }

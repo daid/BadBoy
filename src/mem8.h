@@ -11,10 +11,11 @@
 #define ID_OAM   (0x04LL << 32)
 #define ID_IO    (0x05LL << 32)
 #define ID_HRAM  (0x06LL << 32)
-#define MARK_MASK  (0xFFLL << 40)
-#define MARK_INSTR (0x01LL << 40)
-#define MARK_DATA  (0x02LL << 40)
-#define MARK_PTR   (0x04LL << 40)
+#define MARK_MASK     (0xFFLL << 40)
+#define MARK_INSTR    (0x01LL << 40)
+#define MARK_DATA     (0x02LL << 40)
+#define MARK_PTR_LOW  (0x04LL << 40)
+#define MARK_PTR_HIGH (0x08LL << 40)
 
 class Mem8
 {
