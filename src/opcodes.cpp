@@ -3,6 +3,13 @@
 #include "mm.h"
 #include "cpu.h"
 
+static Mem8* dereference(Mem8& high, Mem8& low)
+{
+    uint16_t address = low.get() | high.get() << 8;
+    low.markOrigin(MARK_PTR);
+    return &mm::get(address);
+}
+
 Opcode decode(uint16_t address)
 {
     auto& m = mm::get(address);
@@ -19,7 +26,7 @@ Opcode decode(uint16_t address)
         case 3: result.dst_l = &cpu.E; break;
         case 4: result.dst_l = &cpu.H; break;
         case 5: result.dst_l = &cpu.L; break;
-        case 6: result.dst_l = &mm::get(cpu.getHL()); result.cycles = 16; break;
+        case 6: result.dst_l = dereference(cpu.H, cpu.L); result.cycles = 16; break;
         case 7: result.dst_l = &cpu.A; break;
         }
         if (op < 0x40)
@@ -60,8 +67,8 @@ Opcode decode(uint16_t address)
     case 0x21: return {Opcode::LD16, 3, 12, &cpu.H, &cpu.L, &mm::get(address + 2), &mm::get(address + 1)};
     case 0x31: return {Opcode::LD16, 3, 12, &cpu.S, &cpu.P, &mm::get(address + 2), &mm::get(address + 1)};
 
-    case 0x02: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getBC()), nullptr, &cpu.A};
-    case 0x12: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getDE()), nullptr, &cpu.A};
+    case 0x02: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.B, cpu.C), nullptr, &cpu.A};
+    case 0x12: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.D, cpu.E), nullptr, &cpu.A};
     case 0x22: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHLinc()), nullptr, &cpu.A};
     case 0x32: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHLdec()), nullptr, &cpu.A};
 
@@ -73,17 +80,17 @@ Opcode decode(uint16_t address)
     case 0x04: return {Opcode::INC8, 1, 4, nullptr, &cpu.B};
     case 0x14: return {Opcode::INC8, 1, 4, nullptr, &cpu.D};
     case 0x24: return {Opcode::INC8, 1, 4, nullptr, &cpu.H};
-    case 0x34: return {Opcode::INC8, 1, 12, nullptr, &mm::get(cpu.getHL())};
+    case 0x34: return {Opcode::INC8, 1, 12, nullptr, dereference(cpu.H, cpu.L)};
 
     case 0x05: return {Opcode::DEC8, 1, 4, nullptr, &cpu.B};
     case 0x15: return {Opcode::DEC8, 1, 4, nullptr, &cpu.D};
     case 0x25: return {Opcode::DEC8, 1, 4, nullptr, &cpu.H};
-    case 0x35: return {Opcode::DEC8, 1, 12, nullptr, &mm::get(cpu.getHL())};
+    case 0x35: return {Opcode::DEC8, 1, 12, nullptr, dereference(cpu.H, cpu.L)};
 
     case 0x06: return {Opcode::LD8, 2, 8, nullptr, &cpu.B, nullptr, &mm::get(address + 1)};
     case 0x16: return {Opcode::LD8, 2, 8, nullptr, &cpu.D, nullptr, &mm::get(address + 1)};
     case 0x26: return {Opcode::LD8, 2, 8, nullptr, &cpu.H, nullptr, &mm::get(address + 1)};
-    case 0x36: return {Opcode::LD8, 2, 12, nullptr, &mm::get(cpu.getHL()), nullptr, &mm::get(address + 1)};
+    case 0x36: return {Opcode::LD8, 2, 12, nullptr, dereference(cpu.H, cpu.L), nullptr, &mm::get(address + 1)};
 
     case 0x07: return {Opcode::RLCA, 1, 4, nullptr, &cpu.A};
     case 0x17: return {Opcode::RLA, 1, 4, nullptr, &cpu.A};
@@ -103,8 +110,8 @@ Opcode decode(uint16_t address)
     case 0x29: return {Opcode::ADD16, 1, 8, &cpu.H, &cpu.L, &cpu.H, &cpu.L};
     case 0x39: return {Opcode::ADD16, 1, 8, &cpu.H, &cpu.L, &cpu.S, &cpu.P};
 
-    case 0x0A: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getBC())};
-    case 0x1A: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getDE())};
+    case 0x0A: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.B, cpu.C)};
+    case 0x1A: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.D, cpu.E)};
     case 0x2A: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHLinc())};
     case 0x3A: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHLdec())};
 
@@ -136,42 +143,42 @@ Opcode decode(uint16_t address)
     case 0x40: return {Opcode::LD8, 1, 4, nullptr, &cpu.B, nullptr, &cpu.B};
     case 0x50: return {Opcode::LD8, 1, 4, nullptr, &cpu.D, nullptr, &cpu.B};
     case 0x60: return {Opcode::LD8, 1, 4, nullptr, &cpu.H, nullptr, &cpu.B};
-    case 0x70: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHL()), nullptr, &cpu.B};
+    case 0x70: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.H, cpu.L), nullptr, &cpu.B};
 
     case 0x41: return {Opcode::LD8, 1, 4, nullptr, &cpu.B, nullptr, &cpu.C};
     case 0x51: return {Opcode::LD8, 1, 4, nullptr, &cpu.D, nullptr, &cpu.C};
     case 0x61: return {Opcode::LD8, 1, 4, nullptr, &cpu.H, nullptr, &cpu.C};
-    case 0x71: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHL()), nullptr, &cpu.C};
+    case 0x71: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.H, cpu.L), nullptr, &cpu.C};
 
     case 0x42: return {Opcode::LD8, 1, 4, nullptr, &cpu.B, nullptr, &cpu.D};
     case 0x52: return {Opcode::LD8, 1, 4, nullptr, &cpu.D, nullptr, &cpu.D};
     case 0x62: return {Opcode::LD8, 1, 4, nullptr, &cpu.H, nullptr, &cpu.D};
-    case 0x72: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHL()), nullptr, &cpu.D};
+    case 0x72: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.H, cpu.L), nullptr, &cpu.D};
 
     case 0x43: return {Opcode::LD8, 1, 4, nullptr, &cpu.B, nullptr, &cpu.E};
     case 0x53: return {Opcode::LD8, 1, 4, nullptr, &cpu.D, nullptr, &cpu.E};
     case 0x63: return {Opcode::LD8, 1, 4, nullptr, &cpu.H, nullptr, &cpu.E};
-    case 0x73: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHL()), nullptr, &cpu.E};
+    case 0x73: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.H, cpu.L), nullptr, &cpu.E};
 
     case 0x44: return {Opcode::LD8, 1, 4, nullptr, &cpu.B, nullptr, &cpu.H};
     case 0x54: return {Opcode::LD8, 1, 4, nullptr, &cpu.D, nullptr, &cpu.H};
     case 0x64: return {Opcode::LD8, 1, 4, nullptr, &cpu.H, nullptr, &cpu.H};
-    case 0x74: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHL()), nullptr, &cpu.H};
+    case 0x74: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.H, cpu.L), nullptr, &cpu.H};
 
     case 0x45: return {Opcode::LD8, 1, 4, nullptr, &cpu.B, nullptr, &cpu.L};
     case 0x55: return {Opcode::LD8, 1, 4, nullptr, &cpu.D, nullptr, &cpu.L};
     case 0x65: return {Opcode::LD8, 1, 4, nullptr, &cpu.H, nullptr, &cpu.L};
-    case 0x75: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHL()), nullptr, &cpu.L};
+    case 0x75: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.H, cpu.L), nullptr, &cpu.L};
 
-    case 0x46: return {Opcode::LD8, 1, 8, nullptr, &cpu.B, nullptr, &mm::get(cpu.getHL())};
-    case 0x56: return {Opcode::LD8, 1, 8, nullptr, &cpu.D, nullptr, &mm::get(cpu.getHL())};
-    case 0x66: return {Opcode::LD8, 1, 8, nullptr, &cpu.H, nullptr, &mm::get(cpu.getHL())};
+    case 0x46: return {Opcode::LD8, 1, 8, nullptr, &cpu.B, nullptr, dereference(cpu.H, cpu.L)};
+    case 0x56: return {Opcode::LD8, 1, 8, nullptr, &cpu.D, nullptr, dereference(cpu.H, cpu.L)};
+    case 0x66: return {Opcode::LD8, 1, 8, nullptr, &cpu.H, nullptr, dereference(cpu.H, cpu.L)};
     case 0x76: return {Opcode::HALT, 1, 4};
 
     case 0x47: return {Opcode::LD8, 1, 4, nullptr, &cpu.B, nullptr, &cpu.A};
     case 0x57: return {Opcode::LD8, 1, 4, nullptr, &cpu.D, nullptr, &cpu.A};
     case 0x67: return {Opcode::LD8, 1, 4, nullptr, &cpu.H, nullptr, &cpu.A};
-    case 0x77: return {Opcode::LD8, 1, 8, nullptr, &mm::get(cpu.getHL()), nullptr, &cpu.A};
+    case 0x77: return {Opcode::LD8, 1, 8, nullptr, dereference(cpu.H, cpu.L), nullptr, &cpu.A};
 
     case 0x48: return {Opcode::LD8, 1, 4, nullptr, &cpu.C, nullptr, &cpu.B};
     case 0x58: return {Opcode::LD8, 1, 4, nullptr, &cpu.E, nullptr, &cpu.B};
@@ -203,10 +210,10 @@ Opcode decode(uint16_t address)
     case 0x6D: return {Opcode::LD8, 1, 4, nullptr, &cpu.L, nullptr, &cpu.L};
     case 0x7D: return {Opcode::LD8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
 
-    case 0x4E: return {Opcode::LD8, 1, 8, nullptr, &cpu.C, nullptr, &mm::get(cpu.getHL())};
-    case 0x5E: return {Opcode::LD8, 1, 8, nullptr, &cpu.E, nullptr, &mm::get(cpu.getHL())};
-    case 0x6E: return {Opcode::LD8, 1, 8, nullptr, &cpu.L, nullptr, &mm::get(cpu.getHL())};
-    case 0x7E: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0x4E: return {Opcode::LD8, 1, 8, nullptr, &cpu.C, nullptr, dereference(cpu.H, cpu.L)};
+    case 0x5E: return {Opcode::LD8, 1, 8, nullptr, &cpu.E, nullptr, dereference(cpu.H, cpu.L)};
+    case 0x6E: return {Opcode::LD8, 1, 8, nullptr, &cpu.L, nullptr, dereference(cpu.H, cpu.L)};
+    case 0x7E: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
 
     case 0x4F: return {Opcode::LD8, 1, 4, nullptr, &cpu.C, nullptr, &cpu.A};
     case 0x5F: return {Opcode::LD8, 1, 4, nullptr, &cpu.E, nullptr, &cpu.A};
@@ -219,7 +226,7 @@ Opcode decode(uint16_t address)
     case 0x83: return {Opcode::ADD8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0x84: return {Opcode::ADD8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0x85: return {Opcode::ADD8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0x86: return {Opcode::ADD8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0x86: return {Opcode::ADD8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0x87: return {Opcode::ADD8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0x88: return {Opcode::ADC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.B};
@@ -228,7 +235,7 @@ Opcode decode(uint16_t address)
     case 0x8B: return {Opcode::ADC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0x8C: return {Opcode::ADC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0x8D: return {Opcode::ADC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0x8E: return {Opcode::ADC8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0x8E: return {Opcode::ADC8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0x8F: return {Opcode::ADC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0x90: return {Opcode::SUB8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.B};
@@ -237,7 +244,7 @@ Opcode decode(uint16_t address)
     case 0x93: return {Opcode::SUB8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0x94: return {Opcode::SUB8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0x95: return {Opcode::SUB8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0x96: return {Opcode::SUB8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0x96: return {Opcode::SUB8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0x97: return {Opcode::SUB8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0x98: return {Opcode::SBC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.B};
@@ -246,7 +253,7 @@ Opcode decode(uint16_t address)
     case 0x9B: return {Opcode::SBC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0x9C: return {Opcode::SBC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0x9D: return {Opcode::SBC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0x9E: return {Opcode::SBC8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0x9E: return {Opcode::SBC8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0x9F: return {Opcode::SBC8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0xA0: return {Opcode::AND8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.B};
@@ -255,7 +262,7 @@ Opcode decode(uint16_t address)
     case 0xA3: return {Opcode::AND8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0xA4: return {Opcode::AND8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0xA5: return {Opcode::AND8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0xA6: return {Opcode::AND8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0xA6: return {Opcode::AND8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0xA7: return {Opcode::AND8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0xA8: return {Opcode::XOR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.B};
@@ -264,7 +271,7 @@ Opcode decode(uint16_t address)
     case 0xAB: return {Opcode::XOR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0xAC: return {Opcode::XOR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0xAD: return {Opcode::XOR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0xAE: return {Opcode::XOR8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0xAE: return {Opcode::XOR8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0xAF: return {Opcode::XOR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0xB0: return {Opcode::OR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.B};
@@ -273,7 +280,7 @@ Opcode decode(uint16_t address)
     case 0xB3: return {Opcode::OR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0xB4: return {Opcode::OR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0xB5: return {Opcode::OR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0xB6: return {Opcode::OR8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0xB6: return {Opcode::OR8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0xB7: return {Opcode::OR8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0xB8: return {Opcode::CP8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.B};
@@ -282,7 +289,7 @@ Opcode decode(uint16_t address)
     case 0xBB: return {Opcode::CP8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.E};
     case 0xBC: return {Opcode::CP8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.H};
     case 0xBD: return {Opcode::CP8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.L};
-    case 0xBE: return {Opcode::CP8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(cpu.getHL())};
+    case 0xBE: return {Opcode::CP8, 1, 8, nullptr, &cpu.A, nullptr, dereference(cpu.H, cpu.L)};
     case 0xBF: return {Opcode::CP8, 1, 4, nullptr, &cpu.A, nullptr, &cpu.A};
 
     case 0xC0: return {Opcode::RETNZ, 1, 8};

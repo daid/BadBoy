@@ -9,14 +9,14 @@ public:
     {
     public:
         uint8_t get() const override;
-        void set(uint8_t) override;
+        void setImpl(uint8_t) override;
     };
     class BasicReg : public Mem8
     {
     public:
         uint8_t value;
         uint8_t get() const override;
-        void set(uint8_t) override;
+        void setImpl(uint8_t) override;
     };
 
     DivReg DIV;

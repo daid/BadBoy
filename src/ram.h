@@ -12,18 +12,20 @@ public:
         return value;
     }
 
-    void set(uint8_t value) override
+    void setImpl(uint8_t value) override
     {
         this->value = value;
     }
 };
 
-namespace wram
+class Ram
 {
-    Mem8& get(uint16_t address);
-}
+public:
+    void init();
+    Mem8& getWRam(uint16_t address);
+    Mem8& getHRam(uint16_t address);
 
-namespace hram
-{
-    Mem8& get(uint16_t address);
-}
+    Mem8Ram SVBK;
+};
+
+extern Ram ram;

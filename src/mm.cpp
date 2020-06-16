@@ -11,7 +11,7 @@
 class Mem8Void : public Mem8
 {
     uint8_t get() const override { return 0xff; }
-    void set(uint8_t) override {}
+    void setImpl(uint8_t) override {}
 };
 static Mem8Void mem8void;
 static Mem8Ram regBootrom;
@@ -27,9 +27,9 @@ Mem8& mm::get(uint16_t address)
     if (address < 0xC000)
         return card.getSRam(address - 0xA000);
     if (address < 0xE000)
-        return wram::get(address - 0xC000);
+        return ram.getWRam(address - 0xC000);
     if (address < 0xFE00)
-        return wram::get(address - 0xE000); //Mirror
+        return ram.getWRam(address - 0xE000); //Mirror
     if (address < 0xFEA0)
         return video.oam[address - 0xFE00];
     if (address < 0xFF00)
@@ -58,10 +58,11 @@ Mem8& mm::get(uint16_t address)
         case 0xFF4B: return video.WX;
         case 0xFF4F: return video.VBK;
         case 0xFF50: return regBootrom;
+        case 0xFF70: return ram.SVBK;
         }
         return mem8void;
     }
     if (address < 0xFFFF)
-        return hram::get(address - 0xFF80);
+        return ram.getHRam(address - 0xFF80);
     return cpu.IE; //IE
 }

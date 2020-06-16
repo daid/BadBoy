@@ -17,6 +17,11 @@ void Video::init()
     window = SDL_CreateWindow("BadBoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * 4, 144 * 4, SDL_WINDOW_SHOWN);
     window_surface = SDL_GetWindowSurface(window);
     backbuffer = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
+
+    for(uint32_t n=0; n<0x4000; n++)
+        vram[n].id = n | ID_VRAM;
+    for(uint32_t n=0; n<0xA0; n++)
+        oam[n].id = n | ID_OAM;
 }
 
 bool Video::update()
@@ -156,7 +161,7 @@ uint8_t Video::DmaReg::get() const
     return 0x00;
 }
 
-void Video::DmaReg::set(uint8_t value)
+void Video::DmaReg::setImpl(uint8_t value)
 {
     uint16_t addr = value << 8;
     for(int n=0; n<0xA0; n++)
@@ -170,7 +175,7 @@ uint8_t Video::PaletteReg::get() const
     return value;
 }
 
-void Video::PaletteReg::set(uint8_t value)
+void Video::PaletteReg::setImpl(uint8_t value)
 {
     this->value = value;
     for(int n=0; n<4; n++)

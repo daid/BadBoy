@@ -9,7 +9,6 @@ Card card;
 class Mem8Rom : public Mem8
 {
 public:
-    uint32_t address;
     uint8_t value;
 
     uint8_t get() const override
@@ -17,9 +16,9 @@ public:
         return value;
     }
 
-    void set(uint8_t value) override
+    void setImpl(uint8_t value) override
     {
-        if (address >= 0x2000 && address < 0x4000)
+        if (id >= 0x2000 && id < 0x4000)
         {
             if (value == 0)
                 value = 1;
@@ -35,9 +34,9 @@ static Mem8Ram sram[0x8000];
 void Card::init()
 {
     for(uint32_t n=0; n<0x100; n++)
-        bootrom[n].address = n;
+        bootrom[n].id = n | ID_ROM;
 
-    FILE* f = fopen("DMG_ROM.bin", "rb");
+    FILE* f = fopen("dmg_boot.bin", "rb");
     if (f)
     {
         uint32_t n = 0;
@@ -47,26 +46,46 @@ void Card::init()
         }
         fclose(f);
     }
-    
+
     //f = fopen("cpu_instrs/individual/02-interrupts.gb", "rb");
     //f = fopen("tetris.gb", "rb");
     f = fopen("zelda.gbc", "rb");
     //f = fopen("cpu_instrs/cpu_instrs.gb", "rb");
     //f = fopen("instr_timing/instr_timing.gb", "rb");
-    fseek(f, 0, SEEK_END);
-    uint32_t size = ftell(f);
-    rom = new Mem8Rom[size];
-    fseek(f, 0, SEEK_SET);
-    for(uint32_t n=0; n<size; n++)
-        rom[n].address = n;
-    uint32_t n = 0;
-    while(fread(&rom[n].value, sizeof(uint8_t), sizeof(uint8_t), f) > 0)
+    if (f)
     {
-        n += 1;
+        fseek(f, 0, SEEK_END);
+        uint32_t size = ftell(f);
+        rom = new Mem8Rom[size];
+        fseek(f, 0, SEEK_SET);
+        for(uint32_t n=0; n<size; n++)
+            rom[n].id = n | ID_ROM;
+        uint32_t n = 0;
+        while(fread(&rom[n].value, sizeof(uint8_t), sizeof(uint8_t), f) > 0)
+        {
+            n += 1;
+        }
+        printf("Card type: %02x\n", rom[0x147].value);
+        fclose(f);
+        rom[0x03].value = 0x01;
     }
-    printf("Card type: %02x\n", rom[0x147].value);
-    fclose(f);
-    rom[0x03].value = 0x01;
+    else
+    {
+        uint32_t size = 0x8000;
+        rom = new Mem8Rom[size];
+        fseek(f, 0, SEEK_SET);
+        for(uint32_t n=0; n<size; n++)
+        {
+            rom[n].id = n | ID_ROM;
+            rom[n].value = 0xDD;
+        }
+        for(uint32_t n=0x104; n<0x134; n++)
+            rom[n].value = bootrom[n-0x104+0xA8].value;
+        uint8_t checksum = 0;
+        for(uint32_t n=0x134; n<0x14D; n++)
+            checksum -= rom[n].value + 1;
+        rom[0x14D].value = checksum;
+    }
 }
 
 Mem8& Card::getRom(uint16_t address)

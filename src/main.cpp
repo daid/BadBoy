@@ -14,11 +14,17 @@
 int main(int argc, char** argv)
 {
     printf("Start\n");
- 
+
     card.init();
     video.init();
+    ram.init();
+    for(uint32_t n=0xFF00; n<0xFF80; n++)
+        mm::get(n).id = n | ID_IO;
+    mm::get(0xFF7F).id = std::numeric_limits<uint64_t>::max();
+    mm::get(0xFFFF).id = 0xFFFF | ID_IO;
 
-    cpu.gbc = true;
+    cpu.gbc = card.getRom(0x143).get() & 0x80;
+    if (false)
     {
         cpu.A.set(cpu.gbc ? 0x11 : 0x01);
         cpu.F.set(0xB0);
@@ -97,6 +103,10 @@ int main(int argc, char** argv)
         timer.update();
     }
     printf("Done: %04x:%02x\n", cpu.pc, mm::get(cpu.pc).get());
-    system("pause");
+    for(int n=0;n<0x100;n++)
+    {
+        printf("%04x: %016llx\n", n, card.getBoot(n).used_as);
+    }
+    //system("pause");
     return 0;
 }

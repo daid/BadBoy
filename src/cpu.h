@@ -13,7 +13,7 @@ public:
         return value;
     }
 
-    void set(uint8_t value) override
+    void setImpl(uint8_t value) override
     {
         this->value = value;
     }
@@ -33,7 +33,7 @@ public:
         return res;
     }
 
-    void set(uint8_t value) override
+    void setImpl(uint8_t value) override
     {
         Z = (value & 0x80);
         N = (value & 0x40);

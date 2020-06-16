@@ -52,6 +52,8 @@ uint16_t Cpu::getHLdec()
 
 void Cpu::execute(const Opcode& opcode)
 {
+    for(uint16_t n=pc; n<pc+opcode.size; n++)
+        mm::get(n).mark(MARK_INSTR);
     uint8_t tmp;
     pc += opcode.size;
     cycles += opcode.cycles;
@@ -66,11 +68,12 @@ void Cpu::execute(const Opcode& opcode)
     case Opcode::EI: ime = true; break;
 
     case Opcode::LD8:
-        opcode.dst_l->set(opcode.src_l->get());
+        opcode.src_l->mark(MARK_DATA);
+        opcode.dst_l->set(*opcode.src_l);
         break;
     case Opcode::LD16:
-        opcode.dst_h->set(opcode.src_h->get());
-        opcode.dst_l->set(opcode.src_l->get());
+        opcode.dst_h->set(*opcode.src_h);
+        opcode.dst_l->set(*opcode.src_l);
         break;
     case Opcode::INC8:
         opcode.dst_l->set(opcode.dst_l->get() + 1);
@@ -176,6 +179,7 @@ void Cpu::execute(const Opcode& opcode)
     case Opcode::JRNC: if (!F.C) { pc += static_cast<int8_t>(opcode.dst_l->get()); cycles += 4; } break;
 
     case Opcode::JP:
+        opcode.dst_l->markOrigin(MARK_PTR);
         pc = (opcode.dst_h->get() << 8) | opcode.dst_l->get();
         break;
     case Opcode::JPZ: if (F.Z) { pc = (opcode.dst_h->get() << 8) | opcode.dst_l->get(); cycles += 4; } break;
@@ -410,7 +414,7 @@ void Cpu::execute(const Opcode& opcode)
         F.N = false;
         F.H = false;
         F.C = tmp & 0x01;
-        break;    
+        break;
     case Opcode::RL:
         tmp = opcode.dst_l->get();
         if (F.C)

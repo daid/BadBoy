@@ -9,7 +9,7 @@ uint8_t Timer::DivReg::get() const
     return cpu.cycles >> 8;
 }
 
-void Timer::DivReg::set(uint8_t value)
+void Timer::DivReg::setImpl(uint8_t value)
 {
 }
 
@@ -18,7 +18,7 @@ uint8_t Timer::BasicReg::get() const
     return value;
 }
 
-void Timer::BasicReg::set(uint8_t value)
+void Timer::BasicReg::setImpl(uint8_t value)
 {
     this->value = value;
 }

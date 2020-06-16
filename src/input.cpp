@@ -6,23 +6,17 @@ Input input;
 
 uint8_t Input::get() const
 {
-    switch(mode)
-    {
-    case Mode::None: return 0x00;
-    case Mode::Buttons: return buttons ^ 0x3F;
-    case Mode::Directions: return directions ^ 0x3F;
-    }
-    return 0x00;
+    uint8_t result = mode;
+    if (!(result & 0x20))
+        result &=~buttons;
+    if (!(result & 0x10))
+        result &=~directions;
+    return result;
 }
 
-void Input::set(uint8_t value)
+void Input::setImpl(uint8_t value)
 {
-    if (!(value & 0x20))
-        mode = Mode::Buttons;
-    else if (!(value & 0x10))
-        mode = Mode::Directions;
-    else
-        mode = Mode::None;
+    mode = value | 0xCF;
 }
 
 void Input::update()

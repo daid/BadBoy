@@ -11,18 +11,18 @@ public:
     public:
         uint8_t value;
         uint8_t get() const override { return value; }
-        void set(uint8_t value) override { this->value = value; }
+        void setImpl(uint8_t value) override { this->value = value; }
     };
     class DmaReg : public Mem8
     {
         uint8_t get() const override;
-        void set(uint8_t value) override;
+        void setImpl(uint8_t value) override;
     };
     class PaletteReg : public Mem8
     {
     public:
         uint8_t get() const override;
-        void set(uint8_t value) override;
+        void setImpl(uint8_t value) override;
 
         uint8_t value;
         uint32_t palette[4];
