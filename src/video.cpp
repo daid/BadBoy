@@ -235,8 +235,11 @@ void Video::ColorPaletteReg::setImpl(uint8_t value)
         index.set(((idx + 1) & 0x3F) | 0x80);
 
     uint16_t color16 = data[idx & 0x3E] | (data[idx | 0x01] << 8);
-    palette[idx / 2] =
-        (((color16 >> 0) & 0x1F) << 19) |
-        (((color16 >> 5) & 0x1F) << 11) |
-        (((color16 >> 10) & 0x1F) << 3);
+
+    uint32_t r = (color16 >> 0) & 0x1F;
+    uint32_t g = (color16 >> 5) & 0x1F;
+    uint32_t b = (color16 >> 10) & 0x1F;
+    uint32_t w = r + g + b;
+    palette[idx / 2] = (r << 19) | (g << 11) | (b << 3);
+    palette[idx / 2] |= (w << 16) | (w << 8) | (w << 0);
 }
