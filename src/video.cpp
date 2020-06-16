@@ -106,9 +106,9 @@ bool Video::update()
                 int pal_idx = 0;
                 uint8_t bit;
                 if (window_attr & 0x20)
-                    bit = 0x01 << (bgx & 7);
+                    bit = 0x01 << (wx & 7);
                 else
-                    bit = 0x80 >> (bgx & 7);
+                    bit = 0x80 >> (wx & 7);
                 if (a & bit)
                     pal_idx |= 1;
                 if (b & bit)
