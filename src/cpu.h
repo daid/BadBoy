@@ -60,11 +60,13 @@ public:
 
     uint16_t pc;
     uint32_t cycles;
+    uint32_t speed = 1;
     bool ime;
     bool halt;
 
     Mem8Reg IF;
     Mem8Reg IE;
+    Mem8Reg KEY1;
 
     bool gbc;
 

@@ -60,7 +60,15 @@ void Cpu::execute(const Opcode& opcode)
     switch(opcode.type)
     {
     case Opcode::NOP: break;
-    case Opcode::STOP: NOT_IMPLEMENTED(); break;
+    case Opcode::STOP:
+        if (cpu.gbc)
+        {
+            if (cpu.KEY1.get() & 0x01)
+            {
+                cpu.speed = (cpu.KEY1.get() & 0x80) ? 2 : 1;
+            }
+        }
+        break;
     case Opcode::HALT:
         halt = true;
         break;

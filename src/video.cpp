@@ -26,9 +26,9 @@ void Video::init()
 
 bool Video::update()
 {
-    if (cpu.cycles < line_start_cycle + 456)
+    if (cpu.cycles < line_start_cycle + 456 * cpu.speed)
         return false;
-    line_start_cycle += 456;
+    line_start_cycle += 456 * cpu.speed;
     uint8_t line = LY.get();
     LY.set((line + 1) % 154);
     if (LY.value == LYC.value)
