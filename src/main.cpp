@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     mm::get(0xFFFF).id = 0xFFFF | ID_IO;
 
     cpu.gbc = card.getRom(0x143).get() & 0x80;
-    if (false)
+    if (true)
     {
         cpu.A.set(cpu.gbc ? 0x11 : 0x01);
         cpu.F.set(0xB0);

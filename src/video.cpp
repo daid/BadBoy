@@ -54,17 +54,32 @@ bool Video::update()
         {
             int bgx = (x + SCX.get()) & 0xFF;
             uint8_t background_tile = vram[background_tile_index + bgx / 8].get();
-            int tile_data_index = 0x0000 + background_tile * 16 + background_tile_y * 2;
+            uint8_t background_attr = vram[background_tile_index + bgx / 8 + 0x2000].get();
+            int tile_data_index = 0x0000 + background_tile * 16;
+            if (background_attr & 0x40)
+                tile_data_index += 14 - (background_tile_y * 2);
+            else
+                tile_data_index += background_tile_y * 2;
             if (!(LCDC.value & 0x10) && tile_data_index < 0x0800)
                 tile_data_index |= 0x1000;
+            if (background_attr & 0x08)
+                tile_data_index |= 0x2000;
             uint8_t a = vram[tile_data_index + 0].get();
             uint8_t b = vram[tile_data_index + 1].get();
             int pal_idx = 0;
-            if (a & (0x80 >> (bgx & 7)))
+            uint8_t bit;
+            if (background_attr & 0x20)
+                bit = 0x01 << (bgx & 7);
+            else
+                bit = 0x80 >> (bgx & 7);
+            if (a & bit)
                 pal_idx |= 1;
-            if (b & (0x80 >> (bgx & 7)))
+            if (b & bit)
                 pal_idx |= 2;
-            line_ptr[x] = BGP.palette[pal_idx];
+            if (cpu.gbc)
+                line_ptr[x] = BCPD.palette[(background_attr & 0x07) * 4 + pal_idx];
+            else
+                line_ptr[x] = BGP.palette[pal_idx];
         }
         if (video.LCDC.value & 0x20 && line >= WY.value)
         {
@@ -76,17 +91,32 @@ bool Video::update()
             {
                 int wx = x - (WX.value-7);
                 uint8_t window_tile = vram[window_tile_index + wx / 8].get();
-                int tile_data_index = 0x0000 + window_tile * 16 + window_tile_y * 2;
+                uint8_t window_attr = vram[(window_tile_index + wx / 8) | 0x2000].get();
+                int tile_data_index = 0x0000 + window_tile * 16;
+                if (window_attr & 0x40)
+                    tile_data_index += 14 - (window_tile_y * 2);
+                else
+                    tile_data_index += window_tile_y * 2;
                 if (!(LCDC.value & 0x10) && tile_data_index < 0x0800)
                     tile_data_index |= 0x1000;
+                if (window_attr & 0x08)
+                    tile_data_index |= 0x2000;
                 uint8_t a = vram[tile_data_index + 0].get();
                 uint8_t b = vram[tile_data_index + 1].get();
                 int pal_idx = 0;
-                if (a & (0x80 >> (wx & 7)))
+                uint8_t bit;
+                if (window_attr & 0x20)
+                    bit = 0x01 << (bgx & 7);
+                else
+                    bit = 0x80 >> (bgx & 7);
+                if (a & bit)
                     pal_idx |= 1;
-                if (b & (0x80 >> (wx & 7)))
+                if (b & bit)
                     pal_idx |= 2;
-                line_ptr[x] = BGP.palette[pal_idx];
+                if (cpu.gbc)
+                    line_ptr[x] = BCPD.palette[(window_attr & 0x07) * 4 + pal_idx];
+                else
+                    line_ptr[x] = BGP.palette[pal_idx];
             }
         }
         if (video.LCDC.value & 0x02)
@@ -107,6 +137,11 @@ bool Video::update()
                     tile_index += (sprite_size - 1 - y) * 2;
                 uint8_t a = vram[tile_index + 0].get();
                 uint8_t b = vram[tile_index + 1].get();
+                uint32_t* pal = OBP0.palette;
+                if (oam[idx+3].value & 0x10)
+                    pal = OBP1.palette;
+                if (cpu.gbc)
+                    pal = OCPD.palette + 4 * (oam[idx+3].value & 0x07);
                 for(int bit=0; bit<8; bit++)
                 {
                     if (x+bit < 0 || x+bit >= 160)
@@ -123,10 +158,7 @@ bool Video::update()
                         pal_idx |= 2;
                     if (pal_idx != 0)
                     {
-                        if (oam[idx+3].value & 0x10)
-                            line_ptr[x+bit] = OBP1.palette[pal_idx];
-                        else
-                            line_ptr[x+bit] = OBP0.palette[pal_idx];
+                        line_ptr[x+bit] = pal[pal_idx];
                     }
                 }
             }
@@ -188,4 +220,23 @@ void Video::PaletteReg::setImpl(uint8_t value)
         case 3: palette[n] = 0x000000; break;
         }
     }
+}
+
+uint8_t Video::ColorPaletteReg::get() const
+{
+    return data[index.get() & 0x3F];
+}
+
+void Video::ColorPaletteReg::setImpl(uint8_t value)
+{
+    int idx = index.get() & 0x3F;
+    data[idx] = value;
+    if (index.get() & 0x80)
+        index.set(((idx + 1) & 0x3F) | 0x80);
+
+    uint16_t color16 = data[idx & 0x3E] | (data[idx | 0x01] << 8);
+    palette[idx / 2] =
+        (((color16 >> 0) & 0x1F) << 19) |
+        (((color16 >> 5) & 0x1F) << 11) |
+        (((color16 >> 10) & 0x1F) << 3);
 }

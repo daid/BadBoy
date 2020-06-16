@@ -27,6 +27,19 @@ public:
         uint8_t value;
         uint32_t palette[4];
     };
+    class ColorPaletteReg : public Mem8
+    {
+    public:
+        ColorPaletteReg(VideoReg& index) : index(index) {}
+
+        uint8_t get() const override;
+        void setImpl(uint8_t value) override;
+
+        uint8_t data[0x40];
+        uint32_t palette[0x20];
+
+        VideoReg& index;
+    };
     VideoReg LCDC; //0xFF40
     VideoReg STAT; //0xFF41
     VideoReg SCY; //0xFF42
@@ -40,6 +53,10 @@ public:
     VideoReg WY; //0xFF4A
     VideoReg WX; //0xFF4B
     VideoReg VBK; //0xFF4F
+    VideoReg BCPS;//0xFF68
+    ColorPaletteReg BCPD{BCPS}; //0xFF69
+    VideoReg OCPS;//0xFF6A
+    ColorPaletteReg OCPD{OCPS}; //0xFF6B
 
     Mem8Ram vram[0x4000];
     Mem8Ram oam[0xA0];

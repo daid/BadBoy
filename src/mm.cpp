@@ -58,6 +58,10 @@ Mem8& mm::get(uint16_t address)
         case 0xFF4B: return video.WX;
         case 0xFF4F: return video.VBK;
         case 0xFF50: return regBootrom;
+        case 0xFF68: return video.BCPS;
+        case 0xFF69: return video.BCPD;
+        case 0xFF6A: return video.OCPS;
+        case 0xFF6B: return video.OCPD;
         case 0xFF70: return ram.SVBK;
         }
         return mem8void;
