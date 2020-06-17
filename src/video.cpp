@@ -14,6 +14,9 @@ SDL_Surface* backbuffer;
 
 void Video::init()
 {
+    vram.resize(0x4000);
+    oam.resize(0x00A0);
+
     SDL_Init(SDL_INIT_EVERYTHING);
     window = SDL_CreateWindow("BadBoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * 4, 144 * 4, SDL_WINDOW_SHOWN);
     window_surface = SDL_GetWindowSurface(window);
@@ -255,4 +258,10 @@ void Video::ColorPaletteReg::setImpl(uint8_t value)
     ib = std::max(0, std::min(255, ib));
 
     palette[idx / 2] = (ir << 16) | (ig << 8) | (ib << 0);
+}
+
+void Video::dumpInstrumentation(FILE* f)
+{
+    vram.dumpInstrumentation(f);
+    oam.dumpInstrumentation(f);
 }

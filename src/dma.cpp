@@ -15,7 +15,7 @@ void DMA::DmaReg::setImpl(uint8_t value)
     uint16_t addr = value << 8;
     for(int n=0; n<0xA0; n++)
     {
-        video.oam[n].set(mm::get(addr++).get());
+        video.oam[n].set(mm::get(addr++));
     }
 }
 

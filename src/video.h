@@ -52,13 +52,14 @@ public:
     VideoReg OCPS;//0xFF6A
     ColorPaletteReg OCPD{OCPS}; //0xFF6B
 
-    Mem8Ram vram[0x4000];
-    Mem8Ram oam[0xA0];
+    Mem8Block<Mem8Ram> vram;
+    Mem8Block<Mem8Ram> oam;
 
     uint32_t line_start_cycle;
 
     void init();
     bool update();
+    void dumpInstrumentation(FILE* f);
 
     Mem8& getVRam(uint16_t address);
 };

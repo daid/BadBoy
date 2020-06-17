@@ -22,17 +22,24 @@ public:
         {
             if (value == 0)
                 value = 1;
-            card.upper_bank = value;
+            card.rom_upper_bank = value;
+        }
+        if (id >= 0x4000 && (id & 0x2000) == 0x0000)
+        {
+            card.ram_bank = value & 0x03;
         }
     }
 };
 
-static Mem8Rom bootrom[0x100];
-static Mem8Rom* rom;
-static Mem8Ram sram[0x8000];
+static Mem8Block<Mem8Rom> bootrom;
+static Mem8Block<Mem8Rom> rom;
+static Mem8Block<Mem8Ram> sram;
 
-void Card::init()
+
+void Card::init(const char* filename)
 {
+    bootrom.resize(0x100);
+    sram.resize(0x8000);
     for(uint32_t n=0; n<0x100; n++)
         bootrom[n].id = n | ID_ROM;
 
@@ -47,16 +54,12 @@ void Card::init()
         fclose(f);
     }
 
-    //f = fopen("cpu_instrs/individual/02-interrupts.gb", "rb");
-    //f = fopen("tetris.gb", "rb");
-    f = fopen("zelda.gbc", "rb");
-    //f = fopen("cpu_instrs/cpu_instrs.gb", "rb");
-    //f = fopen("instr_timing/instr_timing.gb", "rb");
+    f = fopen(filename, "rb");
     if (f)
     {
         fseek(f, 0, SEEK_END);
         uint32_t size = ftell(f);
-        rom = new Mem8Rom[size];
+        rom.resize(size);
         fseek(f, 0, SEEK_SET);
         for(uint32_t n=0; n<size; n++)
             rom[n].id = n | ID_ROM;
@@ -65,15 +68,17 @@ void Card::init()
         {
             n += 1;
         }
+        //TODO: We currently emulate a MBC5+RAM, which should be compattible with most things.
+        //      But from the header we can read which MBC we should be using.
         printf("Card type: %02x\n", rom[0x147].value);
         fclose(f);
         rom[0x03].value = 0x01;
     }
     else
     {
+        printf("Failed to open ROM file: %s (Filling ROM with invalid instructions)\n", filename);
         uint32_t size = 0x8000;
-        rom = new Mem8Rom[size];
-        fseek(f, 0, SEEK_SET);
+        rom.resize(size);
         for(uint32_t n=0; n<size; n++)
         {
             rom[n].id = n | ID_ROM;
@@ -85,22 +90,29 @@ void Card::init()
         for(uint32_t n=0x134; n<0x14D; n++)
             checksum -= rom[n].value + 1;
         rom[0x14D].value = checksum;
+        rom[0x143].value = 0x00;
     }
 }
 
 Mem8& Card::getRom(uint16_t address)
 {
     if (address >= 0x4000)
-        return rom[upper_bank * 0x4000 + (address & 0x3FFF)];
+        return rom[rom_upper_bank * 0x4000 + (address & 0x3FFF)];
     return rom[address];
 }
 
 Mem8& Card::getSRam(uint16_t address)
 {
-    return sram[address];
+    return sram[ram_bank * 0x2000 + address];
 }
 
 Mem8& Card::getBoot(uint16_t address)
 {
     return bootrom[address];
+}
+
+void Card::dumpInstrumentation(FILE* f)
+{
+    rom.dumpInstrumentation(f);
+    sram.dumpInstrumentation(f);
 }

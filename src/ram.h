@@ -24,6 +24,7 @@ public:
     void init();
     Mem8& getWRam(uint16_t address);
     Mem8& getHRam(uint16_t address);
+    void dumpInstrumentation(FILE* f);
 
     Mem8Ram SVBK;
 };

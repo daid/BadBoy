@@ -27,3 +27,13 @@ void Mem8::markOrigin(uint64_t mark)
     if (origin)
         origin->used_as |= mark;
 }
+
+void Mem8::dumpInstrumentation(FILE* f) const
+{
+    if (id == std::numeric_limits<uint64_t>::max())
+        return;
+    if (!used_as)
+        return;
+    fwrite(&id, sizeof(id), 1, f);
+    fwrite(&used_as, sizeof(used_as), 1, f);
+}

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdio.h>
+#include <vector>
 #include <limits>
 
 #define ID_MASK  (0xFFLL << 32)
@@ -28,6 +30,17 @@ public:
     void set(uint8_t value);
     void mark(uint64_t mark);
     void markOrigin(uint64_t mark);
+    void dumpInstrumentation(FILE* f) const;
     virtual uint8_t get() const = 0;
     virtual void setImpl(uint8_t) = 0;
+};
+
+template<typename T> class Mem8Block : public std::vector<T>
+{
+public:
+    void dumpInstrumentation(FILE* f)
+    {
+        for(const auto& m : *this)
+            m.dumpInstrumentation(f);
+    }
 };

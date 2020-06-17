@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 {
     printf("Start\n");
 
-    card.init();
+    card.init(argv[1]);
     video.init();
     ram.init();
     for(uint32_t n=0xFF00; n<0xFF80; n++)
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     mm::get(0xFFFF).id = 0xFFFF | ID_IO;
 
     cpu.gbc = card.getRom(0x143).get() & 0x80;
-    if (true)
+    if (card.getBoot(0).get() == 0x00)
     {
         //Skip the bootrom and setup the defaults as they would be after the bootrom.
         cpu.A.set(cpu.gbc ? 0x11 : 0x01);
@@ -104,10 +104,14 @@ int main(int argc, char** argv)
         timer.update();
     }
     printf("Done: %04x:%02x\n", cpu.pc, mm::get(cpu.pc).get());
-    for(int n=0;n<0x100;n++)
+
+    FILE* f = fopen("data.dump", "wb");
+    if (f)
     {
-        printf("%04x: %016llx\n", n, card.getBoot(n).used_as);
+        card.dumpInstrumentation(f);
+        ram.dumpInstrumentation(f);
+        video.dumpInstrumentation(f);
+        fclose(f);
     }
-    system("pause");
     return 0;
 }
