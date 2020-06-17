@@ -29,7 +29,7 @@ void DMA::HdmaReg::setImpl(uint8_t value)
 {
     uint16_t size = uint16_t(value & 0x7F) * 0x10 + 0x10;
     uint16_t src = (dma.HDMA2.get() & 0xF0) | (dma.HDMA1.get() << 8);
-    uint16_t dst = (dma.HDMA4.get() & 0xF0) | (dma.HDMA2.get() << 8);
+    uint16_t dst = (dma.HDMA4.get() & 0xF0) | (dma.HDMA3.get() << 8);
     dst = (dst & 0x1FF0) | 0x8000;
     while(size)
     {

@@ -86,11 +86,11 @@ void Card::init(const char* filename)
         }
         for(uint32_t n=0x104; n<0x134; n++)
             rom[n].value = bootrom[n-0x104+0xA8].value;
+        rom[0x143].value = 0x00;
         uint8_t checksum = 0;
         for(uint32_t n=0x134; n<0x14D; n++)
             checksum -= rom[n].value + 1;
         rom[0x14D].value = checksum;
-        rom[0x143].value = 0x00;
     }
 }
 

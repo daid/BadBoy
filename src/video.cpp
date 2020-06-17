@@ -35,10 +35,10 @@ bool Video::update()
     line_start_cycle += 456 * cpu.speed;
     uint8_t line = LY.get();
     LY.set((line + 1) % 154);
-    if (LY.value == LYC.value)
+    if (line == LYC.value)
     {
         STAT.value |= 0x04;
-        if (STAT.value & 0x80)
+        if (STAT.value & 0x40)
             cpu.setInterrupt(0x02);
     }
     else
@@ -187,7 +187,7 @@ bool Video::update()
 
 Mem8& Video::getVRam(uint16_t address)
 {
-    if (VBK.value & 0x01 && cpu.gbc)
+    if ((VBK.value & 0x01) && cpu.gbc)
         return vram[address | 0x2000];
     return vram[address];
 }
