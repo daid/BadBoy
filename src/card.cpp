@@ -72,7 +72,7 @@ void Card::init(const char* filename)
         //      But from the header we can read which MBC we should be using.
         printf("Card type: %02x\n", rom[0x147].value);
         fclose(f);
-        rom[0x03].value = 0x01;
+        //rom[0x03].value = 0x01;
     }
     else
     {
