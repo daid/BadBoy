@@ -103,7 +103,7 @@ int main(int argc, char** argv)
             input.update();
         timer.update();
     }
-    printf("Done: %04x:%02x\n", cpu.pc, mm::get(cpu.pc).get());
+    printf("Done: %02x:%04x:%02x:%d\n", card.rom_upper_bank, cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
 
     FILE* f = fopen("data.dump", "wb");
     if (f)

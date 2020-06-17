@@ -65,7 +65,8 @@ void Cpu::execute(const Opcode& opcode)
         {
             if (cpu.KEY1.get() & 0x01)
             {
-                cpu.speed = (cpu.KEY1.get() & 0x80) ? 2 : 1;
+                cpu.speed = (cpu.speed == 1) ? 2 : 1;
+                cpu.KEY1.set(cpu.speed == 1 ? 0x00 : 0x80);
             }
         }
         break;
