@@ -6,6 +6,13 @@
 class Audio
 {
 public:
+    class NR52Reg : public Mem8
+    {
+    public:
+        uint8_t get() const override { return 0x00; }
+        void setImpl(uint8_t value) override {}
+    };
+
     Mem8Ram NR10;
     Mem8Ram NR11;
     Mem8Ram NR12;
@@ -26,7 +33,7 @@ public:
     Mem8Ram NR44;
     Mem8Ram NR50;
     Mem8Ram NR51;
-    Mem8Ram NR52;
+    NR52Reg NR52;
     Mem8Ram WAVE[16];
 };
 

@@ -139,6 +139,8 @@ bool Video::update()
                     tile_index += y * 2;
                 else
                     tile_index += (sprite_size - 1 - y) * 2;
+                if (oam[idx+3].value & 0x08)
+                    tile_index |= 0x2000;
                 uint8_t a = vram[tile_index + 0].get();
                 uint8_t b = vram[tile_index + 1].get();
                 uint32_t* pal = OBP0.palette;
@@ -161,9 +163,7 @@ bool Video::update()
                     if (b & mask)
                         pal_idx |= 2;
                     if (pal_idx != 0)
-                    {
                         line_ptr[x+bit] = pal[pal_idx];
-                    }
                 }
             }
         }
