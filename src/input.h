@@ -8,6 +8,7 @@ public:
     virtual uint8_t get() const override;
     virtual void setImpl(uint8_t) override;
 
+    void setReplayFile(const char* filename, bool playback);
     void update();
 
     bool quit = false;

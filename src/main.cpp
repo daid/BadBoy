@@ -1,6 +1,8 @@
 #include <SDL.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <getopt.h>
+#include <string>
 
 #include "card.h"
 #include "opcodes.h"
@@ -43,13 +45,8 @@ static void initCore()
     }
 }
 
-int main(int argc, char** argv)
+void coreLoop()
 {
-    printf("Start\n");
-
-    card.load(argv[1]);
-    initCore();
-
     while(!input.quit)
     {
         if (cpu.ime)
@@ -108,15 +105,52 @@ int main(int argc, char** argv)
             input.update();
         timer.update();
     }
+}
+
+int main(int argc, char** argv)
+{
+    std::string rom_file;
+    std::string output_instrumentation_file;
+    std::string replay_file;
+    bool replay_playback = false;
+
+    int c;
+    while((c = getopt(argc, argv, "-o:r:p")) != -1)
+    {
+        switch(c)
+        {
+        case 1: rom_file = optarg; break;
+        case 'o': output_instrumentation_file = optarg; break;
+        case 'r': replay_file = optarg; break;
+        case 'p': replay_playback = true; break;
+        }
+    }
+    if (rom_file.empty())
+    {
+        printf("No rom file given");
+        return 1;
+    }
+    rom_file = argv[optind];
+
+    printf("%s %s\n", rom_file.c_str(), output_instrumentation_file.c_str());
+    card.load(rom_file.c_str());
+    if (!replay_file.empty())
+        input.setReplayFile(replay_file.c_str(), replay_playback);
+    initCore();
+
+    coreLoop();
     printf("Done: %02x:%04x:%02x:%d\n", card.rom_upper_bank, cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
 
-    FILE* f = fopen("data.dump", "wb");
-    if (f)
+    if (!output_instrumentation_file.empty())
     {
-        card.dumpInstrumentation(f);
-        ram.dumpInstrumentation(f);
-        video.dumpInstrumentation(f);
-        fclose(f);
+        FILE* f = fopen(output_instrumentation_file.c_str(), "wb");
+        if (f)
+        {
+            card.dumpInstrumentation(f);
+            ram.dumpInstrumentation(f);
+            video.dumpInstrumentation(f);
+            fclose(f);
+        }
     }
     return 0;
 }

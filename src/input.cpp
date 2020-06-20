@@ -19,6 +19,11 @@ void Input::setImpl(uint8_t value)
     mode = value | 0xCF;
 }
 
+void Input::setReplayFile(const char* filename, bool playback)
+{
+    printf("Replay functionality not yet implemented\n");
+}
+
 void Input::update()
 {
     SDL_Event e;
