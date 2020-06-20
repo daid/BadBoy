@@ -112,7 +112,8 @@ void Cpu::execute(const Opcode& opcode)
         F.N = false;
         F.H = (tmp & 0x0F) < (opcode.dst_l->get() & 0x0F);
         F.C = (opcode.dst_l->get() + opcode.src_l->get()) > 0xFF;
-        opcode.dst_l->set(tmp);
+        if (tmp != opcode.dst_l->get()) // prevent breaking origin tracking if nothing is added
+            opcode.dst_l->set(tmp);
         break;
     case Opcode::ADC8:
         if (F.C)
@@ -157,14 +158,16 @@ void Cpu::execute(const Opcode& opcode)
         opcode.dst_l->set(value);
         }break;
     case Opcode::AND8:
-        opcode.dst_l->set(opcode.dst_l->get() & opcode.src_l->get());
+        if (opcode.dst_l != opcode.src_l) // prevent breaking origin checking on "and A", which is often used to check for zero.
+            opcode.dst_l->set(opcode.dst_l->get() & opcode.src_l->get());
         F.Z = opcode.dst_l->get() == 0x00;
         F.N = false;
         F.H = true;
         F.C = false;
         break;
     case Opcode::XOR8:
-        opcode.dst_l->set(opcode.dst_l->get() ^ opcode.src_l->get());
+        if (opcode.src_l->get() != 0x00) // prevent breaking origin checking on flipping sprite attributes
+            opcode.dst_l->set(opcode.dst_l->get() ^ opcode.src_l->get());
         F.Z = opcode.dst_l->get() == 0x00;
         F.N = F.H = F.C = false;
         break;

@@ -10,12 +10,9 @@
 #include "timer.h"
 #include "mm.h"
 
-
-int main(int argc, char** argv)
+static void initCore()
 {
-    printf("Start\n");
-
-    card.init(argv[1]);
+    card.init();
     video.init();
     ram.init();
     for(uint32_t n=0xFF00; n<0xFF80; n++)
@@ -44,6 +41,14 @@ int main(int argc, char** argv)
         mm::get(0xFF50).set(0x01);
         cpu.pc = 0x100;
     }
+}
+
+int main(int argc, char** argv)
+{
+    printf("Start\n");
+
+    card.load(argv[1]);
+    initCore();
 
     while(!input.quit)
     {

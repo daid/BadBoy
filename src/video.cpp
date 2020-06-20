@@ -84,6 +84,9 @@ bool Video::update()
                 line_ptr[x] = BCPD.palette[(background_attr & 0x07) * 4 + pal_idx];
             else
                 line_ptr[x] = BGP.palette[pal_idx];
+            line_ptr[x] |= pal_idx << 24;
+            if (background_attr & 0x80)
+                line_ptr[x] |= 0x04 << 24;
         }
         if (video.LCDC.value & 0x20 && line >= WY.value)
         {
@@ -121,6 +124,9 @@ bool Video::update()
                     line_ptr[x] = BCPD.palette[(window_attr & 0x07) * 4 + pal_idx];
                 else
                     line_ptr[x] = BGP.palette[pal_idx];
+                line_ptr[x] |= pal_idx << 24;
+                if (window_attr & 0x80)
+                    line_ptr[x] |= 0x04 << 24;
             }
         }
         if (video.LCDC.value & 0x02)
@@ -151,6 +157,10 @@ bool Video::update()
                 for(int bit=0; bit<8; bit++)
                 {
                     if (x+bit < 0 || x+bit >= 160)
+                        continue;
+                    if (line_ptr[x+bit] & (0x04 << 24))
+                        continue;
+                    if ((oam[idx+3].value & 0x80) && (line_ptr[x+bit] & (0x03 << 24)))
                         continue;
                     int pal_idx = 0;
                     uint8_t mask;

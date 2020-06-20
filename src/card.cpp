@@ -22,7 +22,7 @@ public:
         {
             if (value == 0)
                 value = 1;
-            card.rom_upper_bank = value;
+            card.rom_upper_bank = value & card.rom_bank_mask;
         }
         if (id >= 0x4000 && (id & 0x2000) == 0x0000)
         {
@@ -36,7 +36,7 @@ static Mem8Block<Mem8Rom> rom;
 static Mem8Block<Mem8Ram> sram;
 
 
-void Card::init(const char* filename)
+void Card::init()
 {
     bootrom.resize(0x100);
     sram.resize(0x8000);
@@ -54,29 +54,8 @@ void Card::init(const char* filename)
         fclose(f);
     }
 
-    f = fopen(filename, "rb");
-    if (f)
+    if (rom.size() == 0)
     {
-        fseek(f, 0, SEEK_END);
-        uint32_t size = ftell(f);
-        rom.resize(size);
-        fseek(f, 0, SEEK_SET);
-        for(uint32_t n=0; n<size; n++)
-            rom[n].id = n | ID_ROM;
-        uint32_t n = 0;
-        while(fread(&rom[n].value, sizeof(uint8_t), sizeof(uint8_t), f) > 0)
-        {
-            n += 1;
-        }
-        //TODO: We currently emulate a MBC5+RAM, which should be compattible with most things.
-        //      But from the header we can read which MBC we should be using.
-        printf("Card type: %02x\n", rom[0x147].value);
-        fclose(f);
-        //rom[0x03].value = 0x01;
-    }
-    else
-    {
-        printf("Failed to open ROM file: %s (Filling ROM with invalid instructions)\n", filename);
         uint32_t size = 0x8000;
         rom.resize(size);
         for(uint32_t n=0; n<size; n++)
@@ -92,6 +71,35 @@ void Card::init(const char* filename)
             checksum -= rom[n].value + 1;
         rom[0x14D].value = checksum;
     }
+}
+
+bool Card::load(const char* filename)
+{
+    FILE* f = fopen(filename, "rb");
+    if (!f)
+        return false;
+    
+    fseek(f, 0, SEEK_END);
+    uint32_t size = ftell(f);
+    while(uint32_t(rom_bank_mask + 1) * 0x4000 < size)
+        rom_bank_mask = (rom_bank_mask << 1) | 0x01;
+    size = (rom_bank_mask + 1) * 0x4000;
+    rom.resize(size);
+    fseek(f, 0, SEEK_SET);
+    for(uint32_t n=0; n<size; n++)
+        rom[n].id = n | ID_ROM;
+
+    uint32_t n = 0;
+    while(fread(&rom[n].value, sizeof(uint8_t), sizeof(uint8_t), f) > 0)
+    {
+        n += 1;
+    }
+
+    //TODO: We currently emulate a MBC5+RAM, which should be compattible with most things.
+    //      But from the header we can read which MBC we should be using.
+    printf("Card type: %02x\n", rom[0x147].value);
+    fclose(f);
+    return true;
 }
 
 Mem8& Card::getRom(uint16_t address)
