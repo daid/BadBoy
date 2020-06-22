@@ -37,6 +37,7 @@ def exportAllAsGraphics(rom):
     result.putpalette(pal)
     result.save("output.png")
 
+
 if __name__ == "__main__":
     import sys
     rom = ROM(sys.argv[1])
@@ -50,6 +51,8 @@ if __name__ == "__main__":
 
         while True:
             if addr in done or addr >= 0x4000:
+                if addr >= 0x4000:
+                    print(hex(addr))
                 break
             done.add(addr)
             instr = Instruction(rom, addr)
@@ -62,15 +65,15 @@ if __name__ == "__main__":
             if target and target < 0x8000:
                 todo.append(target)
 
-            if instr.type == instruction.RST and instr.value == 0x00:
+            if instr.type == instruction.RST and instr.p0 == 0x00:
                 addr += 1
                 while True:
                     if info.hasMark(addr, info.MARK_INSTR):
                         break
                     target = struct.unpack("<H", rom.data[(addr & 0x3FFF):(addr & 0x3FFF) + 2])[0]
-                    info.mark(addr, rom.MARK_DATA)
-                    info.mark(addr + 1, rom.MARK_DATA)
-                    info.mark(target, rom.MARK_INSTR)
+                    info.mark(addr, info.MARK_DATA | info.MARK_PTR_LOW)
+                    info.mark(addr + 1, info.MARK_DATA | info.MARK_PTR_HIGH)
+                    info.mark(target, info.MARK_INSTR)
                     todo.append(target)
                     addr += 2
                 break
@@ -79,20 +82,22 @@ if __name__ == "__main__":
                 break
             addr += instr.size
 
-    rom.dumpStats()
+    info.dumpStats()
 
     symbol_table = {}
     addr = 0
     while addr < 0x4000:
+        if addr in symbol_table:
+            print("%s:" % (symbol_table[addr]))
         if info.hasMark(addr, info.MARK_INSTR):
             instr = Instruction(rom, addr)
-            print(hex(addr), instr.format(symbol_table))
+            print(hex(addr), instr.format(info))
             addr += instr.size
         else:
             size = 1
-            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 16:
+            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 8:
                 size += 1
-            print(hex(addr), "db  " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
+            print(hex(addr), "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
             addr += size
 
     # exportAllAsGraphics(rom)
