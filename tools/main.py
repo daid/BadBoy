@@ -1,23 +1,9 @@
 from rom import ROM
 from instruction import Instruction
+from instrumentation import Instrumentation
 import instruction
 import struct
 import PIL.Image
-
-
-ID_MASK  = (0xFF << 32)
-ID_ROM   = (0x00 << 32)
-ID_VRAM  = (0x01 << 32)
-ID_SRAM  = (0x02 << 32)
-ID_WRAM  = (0x03 << 32)
-ID_OAM   = (0x04 << 32)
-ID_IO    = (0x05 << 32)
-ID_HRAM  = (0x06 << 32)
-MARK_MASK     = (0xFF << 40)
-MARK_INSTR    = (0x01 << 40)
-MARK_DATA     = (0x02 << 40)
-MARK_PTR_LOW  = (0x04 << 40)
-MARK_PTR_HIGH = (0x08 << 40)
 
 
 def exportAllAsGraphics(rom):
@@ -54,28 +40,10 @@ def exportAllAsGraphics(rom):
 if __name__ == "__main__":
     import sys
     rom = ROM(sys.argv[1])
-
-    # f = open("tetris.data", "rb")
-    # while True:
-    #     data = f.read(16)
-    #     if not data:
-    #         break
-    #     source, used_as = struct.unpack("<QQ", data)
-    #     if (source & ID_MASK) == ID_ROM:
-    #         if (used_as & MARK_INSTR):
-    #             rom.mark(source & 0xFFFFFFF, rom.MARK_INSTR)
-    #         if (used_as & MARK_DATA):
-    #             rom.mark(source & 0xFFFFFFF, rom.MARK_DATA)
-    #         if (used_as & ID_MASK) == ID_VRAM and (used_as & 0xFFFF) < 0x1800:
-    #             rom.mark(source & 0xFFFFFFF, rom.MARK_TILE)
-    #
-    #     # if (source & ID_MASK) == ID_ROM and (used_as & MARK_DATA) and (used_as & ID_MASK) == ID_VRAM:
-    #     #     print("%016x %016x %02x" % (source, used_as, rom.banks[(source >> 14) & 0xFF][source & 0x3FFF]))
-
-    rom.dumpStats()
+    info = Instrumentation(rom)
 
     done = set()
-    todo = [0x0100, 0x0040, 0x0048, 0x0050, 0x0058, 0x0060]
+    todo = [0x0100, 0x0000, 0x0040, 0x0048, 0x0050, 0x0058, 0x0060]
 
     while todo:
         addr = todo.pop()
@@ -86,23 +54,23 @@ if __name__ == "__main__":
             done.add(addr)
             instr = Instruction(rom, addr)
             # print(hex(addr), instr)
-            rom.mark(addr, rom.MARK_INSTR)
+            info.mark(addr, info.MARK_INSTR)
             for n in range(1, instr.size):
-                rom.mark(addr, rom.MARK_INSTR | rom.MARK_DATA)
+                info.mark(addr, info.MARK_INSTR | info.MARK_DATA)
 
             target = instr.jumpTarget()
             if target and target < 0x8000:
                 todo.append(target)
 
-            if instr.type == instruction.RST and instr.value == 0x28:
+            if instr.type == instruction.RST and instr.value == 0x00:
                 addr += 1
                 while True:
-                    if rom.hasMark(addr, rom.MARK_INSTR):
+                    if info.hasMark(addr, info.MARK_INSTR):
                         break
                     target = struct.unpack("<H", rom.data[(addr & 0x3FFF):(addr & 0x3FFF) + 2])[0]
-                    rom.mark(addr, rom.MARK_DATA)
-                    rom.mark(addr + 1, rom.MARK_DATA)
-                    rom.mark(target, rom.MARK_INSTR)
+                    info.mark(addr, rom.MARK_DATA)
+                    info.mark(addr + 1, rom.MARK_DATA)
+                    info.mark(target, rom.MARK_INSTR)
                     todo.append(target)
                     addr += 2
                 break
@@ -116,12 +84,15 @@ if __name__ == "__main__":
     symbol_table = {}
     addr = 0
     while addr < 0x4000:
-        if rom.hasMark(addr, rom.MARK_INSTR):
+        if info.hasMark(addr, info.MARK_INSTR):
             instr = Instruction(rom, addr)
             print(hex(addr), instr.format(symbol_table))
             addr += instr.size
         else:
-            print(hex(addr), "db $%02x" % (rom.data[addr]))
-            addr += 1
+            size = 1
+            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 16:
+                size += 1
+            print(hex(addr), "db  " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
+            addr += size
 
     # exportAllAsGraphics(rom)
