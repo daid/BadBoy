@@ -52,8 +52,9 @@ uint16_t Cpu::getHLdec()
 
 void Cpu::execute(const Opcode& opcode)
 {
-    for(uint16_t n=pc; n<pc+opcode.size; n++)
-        mm::get(n).mark(MARK_INSTR);
+    mm::get(pc).mark(MARK_INSTR);
+    for(uint16_t n=pc+1; n<pc+opcode.size; n++)
+        mm::get(n).mark(MARK_INSTR | MARK_DATA);
     uint8_t tmp;
     pc += opcode.size;
     cycles += opcode.cycles;

@@ -130,9 +130,7 @@ int main(int argc, char** argv)
         printf("No rom file given");
         return 1;
     }
-    rom_file = argv[optind];
 
-    printf("%s %s\n", rom_file.c_str(), output_instrumentation_file.c_str());
     card.load(rom_file.c_str());
     if (!replay_file.empty())
         input.setReplayFile(replay_file.c_str(), replay_playback);

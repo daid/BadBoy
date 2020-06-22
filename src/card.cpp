@@ -77,7 +77,10 @@ bool Card::load(const char* filename)
 {
     FILE* f = fopen(filename, "rb");
     if (!f)
+    {
+        printf("Failed to open '%s'\n", filename);
         return false;
+    }
     
     fseek(f, 0, SEEK_END);
     uint32_t size = ftell(f);
