@@ -112,14 +112,47 @@ ENDM
             addr += instr.size
         else:
             size = 1
-            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 8 and addr + size < 0x4000:
+            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 8 and addr + size < 0x4000 and addr + size not in info.rom_symbols:
                 size += 1
             if info.hasMark(addr - 1, info.MARK_INSTR) and not any(rom.data[addr:addr+size]):
-                while not info.hasMark(addr + size, info.MARK_INSTR) and rom.data[addr+size] == 0 and addr + size < 0x4000:
+                while not info.hasMark(addr + size, info.MARK_INSTR) and rom.data[addr+size] == 0 and addr + size < 0x4000 and addr + size not in info.rom_symbols:
                     size += 1
                 out(addr, size, "ds   %d, $00" % (size))
             else:
                 out(addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
             addr += size
 
-    # exportAllAsGraphics(rom)
+    s = "Tree of Mana grows"
+    s = "fight everyday"
+    s = "everyday"
+    def guess(done):
+        if done not in rom.data:
+            return
+        if len(done) == len(s):
+            print(rom.data.find(done), done)
+            return
+        idx = s[:len(done)].find(s[len(done)])
+        if idx > -1:
+            guess(done + bytes([done[idx]]))
+        else:
+            for n in range(256):
+                if n not in done:
+                    guess(done + bytes([n]))
+    #guess(b"")
+    #0xBE8A
+    charMap = {}
+    #for idx, c in enumerate(s):
+    #    charMap[rom.data[0xBE8A + idx]] = c
+    #print(charMap)
+    for idx, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+        charMap[186+idx] = c
+    for idx, c in enumerate("abcdefghijklmnopqrstuvwxyz"):
+        charMap[212+idx] = c
+    charMap[255] = " "
+    print(charMap)
+
+    output = ""
+    for c in rom.data:
+        if c in charMap:
+            output += charMap[c]
+    print(output)

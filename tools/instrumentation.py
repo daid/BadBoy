@@ -19,7 +19,23 @@ class Instrumentation:
 
     def __init__(self, rom):
         self.rom = [0] * len(rom.data)
-        self.rom_symbols = {}
+        self.rom_symbols = {
+            0x0000: "rst_00",
+            0x0008: "rst_08",
+            0x0010: "rst_10",
+            0x0018: "rst_18",
+            0x0020: "rst_20",
+            0x0028: "rst_28",
+            0x0030: "rst_30",
+            0x0038: "rst_38",
+            0x0040: "VBlankInterrupt",
+            0x0048: "LCDCInterrupt",
+            0x0050: "TimerOverflowInterrupt",
+            0x0058: "SerialTransferInterrupt",
+            0x0060: "JoypadInterrupt",
+            0x0100: "Reset",
+            0x0104: "Header",
+        }
         self.ram_symbols = {}
         self.reg_symbols = {
             0x2100: "MBCBankSelect",
@@ -97,17 +113,17 @@ class Instrumentation:
             if (source & self.ID_MASK) == self.ID_ROM:
                 self.rom[source & 0xFFFFFFFF] = used_as
 
-    def formatParameter(self, base_address, parameter):
+    def formatParameter(self, base_address, parameter, *, pc_target=False):
         if isinstance(parameter, Ref):
-            return "[%s]" % (self.formatParameter(base_address, parameter.target))
+            return "[%s]" % (self.formatParameter(base_address, parameter.target, pc_target=pc_target))
         if isinstance(parameter, Word):
-            return self.formatParameter(base_address, parameter.target)
+            return self.formatParameter(base_address, parameter.target, pc_target=pc_target)
         if isinstance(parameter, int):
             if parameter >= 0x8000 and parameter in self.reg_symbols:
                 return self.reg_symbols[parameter]
             if parameter >= 0x8000 and parameter in self.ram_symbols:
                 return self.ram_symbols[parameter]
-            if parameter < 0x4000 and parameter in self.rom_symbols:
+            if (parameter >= 0x1000 or pc_target) and parameter < 0x4000 and parameter in self.rom_symbols:
                 return self.rom_symbols[parameter]
             return "$%02x" % (parameter)
         return parameter

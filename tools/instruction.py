@@ -95,8 +95,8 @@ class Instruction:
 
         if op == 0x00: self.__set(NOP)
         if op == 0x10: self.__set(STOP)
-        if op == 0x20: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_NZ)
-        if op == 0x30: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_NC)
+        if op == 0x20: self.__set(JR, self.__getRelativeWord(), condition=COND_NZ)
+        if op == 0x30: self.__set(JR, self.__getRelativeWord(), condition=COND_NC)
 
         if op == 0x01: self.__set(LD, BC, self.__getUInt16())
         if op == 0x11: self.__set(LD, DE, self.__getUInt16())
@@ -134,9 +134,9 @@ class Instruction:
         if op == 0x37: self.__set(SCF)
 
         if op == 0x08: self.__set(LD, Ref(self.__getUInt16()), SP)
-        if op == 0x18: self.__set(JR, Word(address+2+self.__getInt8()))
-        if op == 0x28: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_Z)
-        if op == 0x38: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_C)
+        if op == 0x18: self.__set(JR, self.__getRelativeWord())
+        if op == 0x28: self.__set(JR, self.__getRelativeWord(), condition=COND_Z)
+        if op == 0x38: self.__set(JR, self.__getRelativeWord(), condition=COND_C)
 
         if op == 0x09: self.__set(ADD, HL, BC)
         if op == 0x19: self.__set(ADD, HL, DE)
@@ -444,6 +444,12 @@ class Instruction:
         self.size += 1
         return struct.unpack("b", self.rom.data[self.address+self.size-1:self.address + self.size])[0]
 
+    def __getRelativeWord(self):
+        address = self.address+2+self.__getInt8()
+        if address > 0x4000:
+            address = (address & 0x3FFF) | 0x4000
+        return Word(address)
+
     def __getUInt8(self):
         self.size += 1
         return struct.unpack("B", self.rom.data[self.address+self.size-1:self.address + self.size])[0]
@@ -480,7 +486,7 @@ class Instruction:
         if p0 is None:
             return "%s" % (self.type)
         if p1 is None:
-            return "%-4s %s" % (self.type, info.formatParameter(self.address, p0))
+            return "%-4s %s" % (self.type, info.formatParameter(self.address, p0, pc_target=self.type in (CALL, JR, JP, RST)))
         return "%-4s %s, %s" % (self.type, info.formatParameter(self.address, p0), info.formatParameter(self.address, p1))
 
     def __repr__(self):
