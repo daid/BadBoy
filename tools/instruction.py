@@ -73,6 +73,14 @@ class Ref:
         return "[%s]" % (self.target)
 
 
+class Word:
+    def __init__(self, target):
+        self.target = target
+
+    def __repr__(self):
+        return "$%04x" % (self.target)
+
+
 class Instruction:
     def __init__(self, rom, address):
         self.rom = rom
@@ -87,8 +95,8 @@ class Instruction:
 
         if op == 0x00: self.__set(NOP)
         if op == 0x10: self.__set(STOP)
-        if op == 0x20: self.__set(JR, address+2+self.__getInt8(), condition=COND_NZ)
-        if op == 0x30: self.__set(JR, address+2+self.__getInt8(), condition=COND_NC)
+        if op == 0x20: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_NZ)
+        if op == 0x30: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_NC)
 
         if op == 0x01: self.__set(LD, BC, self.__getUInt16())
         if op == 0x11: self.__set(LD, DE, self.__getUInt16())
@@ -126,9 +134,9 @@ class Instruction:
         if op == 0x37: self.__set(SCF)
 
         if op == 0x08: self.__set(LD, Ref(self.__getUInt16()), SP)
-        if op == 0x18: self.__set(JR, address+2+self.__getInt8())
-        if op == 0x28: self.__set(JR, address+2+self.__getInt8(), condition=COND_Z)
-        if op == 0x38: self.__set(JR, address+2+self.__getInt8(), condition=COND_C)
+        if op == 0x18: self.__set(JR, Word(address+2+self.__getInt8()))
+        if op == 0x28: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_Z)
+        if op == 0x38: self.__set(JR, Word(address+2+self.__getInt8()), condition=COND_C)
 
         if op == 0x09: self.__set(ADD, HL, BC)
         if op == 0x19: self.__set(ADD, HL, DE)
@@ -198,7 +206,9 @@ class Instruction:
         if op == 0x46: self.__set(LD, B, Ref(HL))
         if op == 0x56: self.__set(LD, D, Ref(HL))
         if op == 0x66: self.__set(LD, H, Ref(HL))
-        if op == 0x76: self.__set(HALT)
+        if op == 0x76:
+            assert self.__getUInt8() == 0x00 # Needs a NOP after HALT
+            self.__set(HALT)
 
         if op == 0x47: self.__set(LD, B, A)
         if op == 0x57: self.__set(LD, D, A)
@@ -440,7 +450,7 @@ class Instruction:
 
     def __getUInt16(self):
         self.size += 2
-        return struct.unpack("<H", self.rom.data[self.address + self.size - 2:self.address + self.size])[0]
+        return Word(struct.unpack("<H", self.rom.data[self.address + self.size - 2:self.address + self.size])[0])
 
     def hasNext(self):
         if self.type in (JP, JR, RET) and self.condition is None:
@@ -451,11 +461,19 @@ class Instruction:
 
     def jumpTarget(self):
         if self.type in (CALL, JP, JR) and self.p0 != HL:
+            if isinstance(self.p0, Word):
+                return self.p0.target
             return self.p0
         return None
 
     def format(self, info):
         p0, p1 = self.p0, self.p1
+
+        if self.type == LD and isinstance(self.p0, Ref) and isinstance(self.p0.target, Word) and self.p0.target.target >= 0xFF00 and self.p1 == A:
+            return "ld_long_store %s" % (info.formatParameter(self.address, p0.target))
+        if self.type == LD and isinstance(self.p1, Ref) and isinstance(self.p1.target, Word) and self.p1.target.target >= 0xFF00 and self.p0 == A:
+            return "ld_long_load %s" % (info.formatParameter(self.address, p1.target))
+
         if self.condition is not None:
             p1 = p0
             p0 = self.condition

@@ -4,6 +4,7 @@ from instrumentation import Instrumentation
 import instruction
 import struct
 import PIL.Image
+import argparse
 
 
 def exportAllAsGraphics(rom):
@@ -39,8 +40,11 @@ def exportAllAsGraphics(rom):
 
 
 if __name__ == "__main__":
-    import sys
-    rom = ROM(sys.argv[1])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("rom", type=str)
+    parser.add_argument("--rstJumpTable", type=int, default=None)
+    args = parser.parse_args()
+    rom = ROM(args.rom)
     info = Instrumentation(rom)
 
     done = set()
@@ -51,21 +55,20 @@ if __name__ == "__main__":
 
         while True:
             if addr in done or addr >= 0x4000:
-                if addr >= 0x4000:
-                    print(hex(addr))
+                # TODO
                 break
             done.add(addr)
             instr = Instruction(rom, addr)
-            # print(hex(addr), instr)
             info.mark(addr, info.MARK_INSTR)
             for n in range(1, instr.size):
-                info.mark(addr, info.MARK_INSTR | info.MARK_DATA)
+                info.mark(addr + n, info.MARK_INSTR | info.MARK_DATA)
 
             target = instr.jumpTarget()
             if target and target < 0x8000:
+                info.rom_symbols[target] = "label_%04x" % (target)
                 todo.append(target)
 
-            if instr.type == instruction.RST and instr.p0 == 0x00:
+            if instr.type == instruction.RST and instr.p0 == args.rstJumpTable:
                 addr += 1
                 while True:
                     if info.hasMark(addr, info.MARK_INSTR):
@@ -82,22 +85,41 @@ if __name__ == "__main__":
                 break
             addr += instr.size
 
-    info.dumpStats()
+    # info.dumpStats()
 
-    symbol_table = {}
+    def out(addr, size, data):
+        print("    %-30s ; $%04x" % (data, addr))
+
     addr = 0
+    info.printRegs()
+    print("""
+ld_long_load: MACRO
+    db $FA
+    dw \\1
+ENDM
+ld_long_store: MACRO
+    db $EA
+    dw \\1
+ENDM
+""")
+    print("SECTION \"bank0\", ROM0")
     while addr < 0x4000:
-        if addr in symbol_table:
-            print("%s:" % (symbol_table[addr]))
+        if addr in info.rom_symbols:
+            print("%s:" % (info.rom_symbols[addr]))
         if info.hasMark(addr, info.MARK_INSTR):
             instr = Instruction(rom, addr)
-            print(hex(addr), instr.format(info))
+            out(addr, instr.size, instr.format(info))
             addr += instr.size
         else:
             size = 1
-            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 8:
+            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 8 and addr + size < 0x4000:
                 size += 1
-            print(hex(addr), "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
+            if info.hasMark(addr - 1, info.MARK_INSTR) and not any(rom.data[addr:addr+size]):
+                while not info.hasMark(addr + size, info.MARK_INSTR) and rom.data[addr+size] == 0 and addr + size < 0x4000:
+                    size += 1
+                out(addr, size, "ds   %d, $00" % (size))
+            else:
+                out(addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
             addr += size
 
     # exportAllAsGraphics(rom)

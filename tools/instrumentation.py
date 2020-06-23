@@ -1,5 +1,5 @@
 import struct
-from instruction import Ref
+from instruction import Ref, Word
 
 
 class Instrumentation:
@@ -20,7 +20,10 @@ class Instrumentation:
     def __init__(self, rom):
         self.rom = [0] * len(rom.data)
         self.rom_symbols = {}
-        self.ram_symbols = {
+        self.ram_symbols = {}
+        self.reg_symbols = {
+            0x2100: "MBCBankSelect",
+
             0xff00: "rP1",
             0xff01: "rSB",
             0xff02: "rSC",
@@ -74,14 +77,7 @@ class Instrumentation:
             0xff69: "rBGPD",
             0xff6a: "rOCPS",
             0xff6b: "rOBPD",
-            0xff6c: "rUNKN1",
             0xff70: "rSVBK",
-            0xff72: "rUNKN2",
-            0xff73: "rUNKN3",
-            0xff74: "rUNKN4",
-            0xff75: "rUNKN5",
-            0xff76: "rPCM12",
-            0xff77: "rPCM34",
             0xffff: "rIE",
         }
 
@@ -104,11 +100,21 @@ class Instrumentation:
     def formatParameter(self, base_address, parameter):
         if isinstance(parameter, Ref):
             return "[%s]" % (self.formatParameter(base_address, parameter.target))
+        if isinstance(parameter, Word):
+            return self.formatParameter(base_address, parameter.target)
         if isinstance(parameter, int):
+            if parameter >= 0x8000 and parameter in self.reg_symbols:
+                return self.reg_symbols[parameter]
             if parameter >= 0x8000 and parameter in self.ram_symbols:
                 return self.ram_symbols[parameter]
+            if parameter < 0x4000 and parameter in self.rom_symbols:
+                return self.rom_symbols[parameter]
             return "$%02x" % (parameter)
         return parameter
+
+    def printRegs(self):
+        for value, name in self.reg_symbols.items():
+            print("%s EQU $%04x" % (name, value))
 
     def dumpStats(self):
         stats = {}
