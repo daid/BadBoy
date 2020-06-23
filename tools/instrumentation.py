@@ -2,6 +2,24 @@ import struct
 from instruction import Ref, Word
 
 
+class AutoSymbol:
+    def __init__(self, address=None):
+        self.source_min = address
+        self.source_max = address
+
+    def setAsGlobalSymbol(self):
+        self.source_min = None
+        self.source_max = None
+
+    def addLocalSource(self, address):
+        if self.source_min is None:
+            return
+        self.source_min = min(self.source_min, address)
+        self.source_max = min(self.source_max, address)
+
+    def __repr__(self):
+        return "AutoSymbol<%s:%s>" % (self.source_min, self.source_max)
+
 class Instrumentation:
     ID_MASK = (0xFF << 32)
     ID_ROM = (0x00 << 32)
@@ -103,8 +121,37 @@ class Instrumentation:
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
 
+    def addRomSymbol(self, address, source_address=None):
+        symbol = self.rom_symbols.get(address, None)
+        if not symbol:
+            symbol = AutoSymbol(source_address)
+            self.rom_symbols[address] = symbol
+        if isinstance(symbol, AutoSymbol):
+            if source_address is not None:
+                symbol.addLocalSource(source_address)
+            else:
+                symbol.setAsGlobalSymbol()
+
+    def updateSymbols(self):
+        last_symbol_addr = 0
+        for addr in range(len(self.rom)):
+            if addr not in self.rom_symbols:
+                continue
+            symbol = self.rom_symbols[addr]
+            if isinstance(symbol, AutoSymbol):
+                bank = addr >> 14
+                local_addr = (addr & 0x3FFF) | (0x4000 if bank > 0 else 0x0000)
+                if symbol.source_min is not None and symbol.source_min > last_symbol_addr:
+                    symbol = ".jr_%03x_%04x" % (bank, local_addr)
+                else:
+                    symbol = "jr_%03x_%04x" % (bank, local_addr)
+                self.rom_symbols[addr] = symbol
+            if not symbol.startswith("."):
+                last_symbol_addr = addr
+
+
     def load(self, filename):
-        f = open("tetris.data", "rb")
+        f = open(filename, "rb")
         while True:
             data = f.read(16)
             if not data:
@@ -119,7 +166,7 @@ class Instrumentation:
         if isinstance(parameter, Word):
             return self.formatParameter(base_address, parameter.target, pc_target=pc_target)
         if isinstance(parameter, int):
-            if parameter >= 0x8000 and parameter in self.reg_symbols:
+            if not pc_target and parameter in self.reg_symbols:
                 return self.reg_symbols[parameter]
             if parameter >= 0x8000 and parameter in self.ram_symbols:
                 return self.ram_symbols[parameter]

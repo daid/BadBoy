@@ -52,10 +52,11 @@ if __name__ == "__main__":
 
     while todo:
         addr = todo.pop()
+        active_bank = None
+        a_value = None
 
         while True:
-            if addr in done or addr >= 0x4000:
-                # TODO
+            if addr in done:
                 break
             done.add(addr)
             instr = Instruction(rom, addr)
@@ -63,9 +64,12 @@ if __name__ == "__main__":
             for n in range(1, instr.size):
                 info.mark(addr + n, info.MARK_INSTR | info.MARK_DATA)
 
-            target = instr.jumpTarget()
-            if target and target < 0x8000:
-                info.rom_symbols[target] = "label_%04x" % (target)
+            target = instr.jumpTarget(active_bank)
+            if target:
+                if instr.type == instruction.JR:
+                    info.addRomSymbol(target, addr)
+                else:
+                    info.addRomSymbol(target)
                 todo.append(target)
 
             if instr.type == instruction.RST and instr.p0 == args.rstJumpTable:
@@ -73,7 +77,9 @@ if __name__ == "__main__":
                 while True:
                     if info.hasMark(addr, info.MARK_INSTR):
                         break
-                    target = struct.unpack("<H", rom.data[(addr & 0x3FFF):(addr & 0x3FFF) + 2])[0]
+                    target = struct.unpack("<H", rom.data[addr:addr + 2])[0]
+                    if 0x4000 <= target < 0x8000:
+                        target = (target & 0x3FFF) | (addr & 0xFFFFC000)
                     info.mark(addr, info.MARK_DATA | info.MARK_PTR_LOW)
                     info.mark(addr + 1, info.MARK_DATA | info.MARK_PTR_HIGH)
                     info.mark(target, info.MARK_INSTR)
@@ -85,6 +91,7 @@ if __name__ == "__main__":
                 break
             addr += instr.size
 
+    info.updateSymbols()
     # info.dumpStats()
 
     def out(addr, size, data):
@@ -102,57 +109,31 @@ ld_long_store: MACRO
     dw \\1
 ENDM
 """)
-    print("SECTION \"bank0\", ROM0")
-    while addr < 0x4000:
-        if addr in info.rom_symbols:
-            print("%s:" % (info.rom_symbols[addr]))
-        if info.hasMark(addr, info.MARK_INSTR):
-            instr = Instruction(rom, addr)
-            out(addr, instr.size, instr.format(info))
-            addr += instr.size
+    for bank in range(len(rom.data) // 0x4000):
+        print("")
+        if bank == 0:
+            print("SECTION \"bank00\", ROM0[$0000]")
         else:
-            size = 1
-            while not info.hasMark(addr + size, info.MARK_INSTR) and size < 8 and addr + size < 0x4000 and addr + size not in info.rom_symbols:
-                size += 1
-            if info.hasMark(addr - 1, info.MARK_INSTR) and not any(rom.data[addr:addr+size]):
-                while not info.hasMark(addr + size, info.MARK_INSTR) and rom.data[addr+size] == 0 and addr + size < 0x4000 and addr + size not in info.rom_symbols:
-                    size += 1
-                out(addr, size, "ds   %d, $00" % (size))
+            print("SECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]" % (bank, bank))
+        addr = 0x4000 * bank
+        end_of_bank = addr + 0x4000
+        while addr < end_of_bank:
+            if addr in info.rom_symbols:
+                if not info.rom_symbols[addr].startswith("."):
+                    print("")
+                print("%s:" % (info.rom_symbols[addr]))
+            if info.hasMark(addr, info.MARK_INSTR):
+                instr = Instruction(rom, addr)
+                out(addr, instr.size, instr.format(info))
+                addr += instr.size
             else:
-                out(addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
-            addr += size
-
-    s = "Tree of Mana grows"
-    s = "fight everyday"
-    s = "everyday"
-    def guess(done):
-        if done not in rom.data:
-            return
-        if len(done) == len(s):
-            print(rom.data.find(done), done)
-            return
-        idx = s[:len(done)].find(s[len(done)])
-        if idx > -1:
-            guess(done + bytes([done[idx]]))
-        else:
-            for n in range(256):
-                if n not in done:
-                    guess(done + bytes([n]))
-    #guess(b"")
-    #0xBE8A
-    charMap = {}
-    #for idx, c in enumerate(s):
-    #    charMap[rom.data[0xBE8A + idx]] = c
-    #print(charMap)
-    for idx, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
-        charMap[186+idx] = c
-    for idx, c in enumerate("abcdefghijklmnopqrstuvwxyz"):
-        charMap[212+idx] = c
-    charMap[255] = " "
-    print(charMap)
-
-    output = ""
-    for c in rom.data:
-        if c in charMap:
-            output += charMap[c]
-    print(output)
+                size = 1
+                while size < 8 and addr + size < end_of_bank and addr + size not in info.rom_symbols and not info.hasMark(addr + size, info.MARK_INSTR):
+                    size += 1
+                if info.hasMark(addr - 1, info.MARK_INSTR) and not any(rom.data[addr:addr+size]):
+                    while addr + size < end_of_bank and not info.hasMark(addr + size, info.MARK_INSTR) and rom.data[addr+size] == 0 and addr + size not in info.rom_symbols:
+                        size += 1
+                    out(addr, size, "ds   %d" % (size))
+                else:
+                    out(addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
+                addr += size

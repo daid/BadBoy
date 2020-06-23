@@ -465,11 +465,22 @@ class Instruction:
             return False
         return True
 
-    def jumpTarget(self):
+    def jumpTarget(self, active_bank=None):
         if self.type in (CALL, JP, JR) and self.p0 != HL:
-            if isinstance(self.p0, Word):
-                return self.p0.target
-            return self.p0
+            address = self.p0
+            if isinstance(address, Word):
+                address = address.target
+            if address >= 0x8000:  # Call to RAM/SRAM or HRAM
+                return None
+            if address >= 0x4000:  # Correct the address for the proper bank
+                if self.address < 0x4000:  # Call from bank 0 towards other banks
+                    if active_bank is None:
+                        print("Call from 00:%04x to $%04x, without knowning active bank" % (self.address, address))
+                        return None
+                    address = (active_bank << 14) | (address & 0x3FFF)
+                else:
+                    address = (self.address & 0xFFC000) | (address & 0x3FFF)
+            return address
         return None
 
     def format(self, info):
@@ -485,9 +496,10 @@ class Instruction:
             p0 = self.condition
         if p0 is None:
             return "%s" % (self.type)
+        pc_target = self.type in (CALL, JR, JP, RST)
         if p1 is None:
-            return "%-4s %s" % (self.type, info.formatParameter(self.address, p0, pc_target=self.type in (CALL, JR, JP, RST)))
-        return "%-4s %s, %s" % (self.type, info.formatParameter(self.address, p0), info.formatParameter(self.address, p1))
+            return "%-4s %s" % (self.type, info.formatParameter(self.address, p0, pc_target=pc_target))
+        return "%-4s %s, %s" % (self.type, info.formatParameter(self.address, p0, pc_target=pc_target), info.formatParameter(self.address, p1, pc_target=pc_target))
 
     def __repr__(self):
         return "%s %s %s %s" % (self.type, self.condition, self.p0, self.p1)
