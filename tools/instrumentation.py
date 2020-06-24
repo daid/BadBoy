@@ -173,6 +173,10 @@ class Instrumentation:
                 return self.ram_symbols[parameter]
             if (parameter >= 0x1000 or pc_target) and parameter < 0x4000 and parameter in self.rom_symbols:
                 return self.rom_symbols[parameter]
+            if parameter >= 0x4000 and parameter < 0x8000 and base_address >= 0x4000:  # upper bank target
+                addr = (parameter & 0x3FFF) | (base_address & 0xFFFFC000)
+                if addr in self.rom_symbols:
+                    return self.rom_symbols[addr]
             return "$%02x" % (parameter)
         return parameter
 

@@ -53,8 +53,16 @@ if __name__ == "__main__":
     done = set()
     todo = [0x0100, 0x0000, 0x0040, 0x0048, 0x0050, 0x0058, 0x0060]
     for addr in range(len(rom.data)):
-        if info.hasMark(addr, info.MARK_INSTR) and not info.hasMark(addr, info.MARK_DATA):
-            todo.append(addr)
+        if info.hasMark(addr, info.MARK_INSTR):
+            if not info.hasMark(addr, info.MARK_DATA):
+                todo.append(addr)
+        else:
+            if info.hasMark(addr, info.MARK_PTR_LOW) and info.hasMark(addr + 1, info.MARK_PTR_HIGH):
+                target = rom.data[addr] | (rom.data[addr + 1] << 8)
+                if target < 0x4000:
+                    info.addRomSymbol(target)
+                elif target < 0x8000:
+                    info.addRomSymbol((target & 0x3FFF) | (addr & 0xFFFFC000))
 
     while todo:
         addr = todo.pop()
@@ -100,12 +108,14 @@ if __name__ == "__main__":
     info.updateSymbols()
     info.dumpStats()
 
+
     output = open("out.asm", "wt")
     def out(addr, size, data):
         bank = addr >> 14
+        sub_addr = addr
         if bank > 0:
-            addr = (addr & 0x3FFF) | 0x4000
-        output.write("    %-50s ; $%02x:$%04x" % (data, bank, addr))
+            sub_addr = (addr & 0x3FFF) | 0x4000
+        output.write("    %-50s ; $%02x:$%04x" % (data, bank, sub_addr))
         for n in range(size):
             output.write(" $%02x" % (rom.data[addr+n]))
         output.write("\n")
