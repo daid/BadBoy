@@ -17,6 +17,18 @@ class AutoSymbol:
         self.source_min = min(self.source_min, address)
         self.source_max = min(self.source_max, address)
 
+    def isGlobal(self):
+        return self.source_min is None
+
+    def format(self, addr):
+        bank = addr >> 14
+        addr &= 0x3FFF
+        if bank > 0:
+            addr |= 0x4000
+        if self.source_min is not None:
+            return ".jr_%04x" % (addr)
+        return "jp_%03x_%04x" % (bank, addr)
+
     def __repr__(self):
         return "AutoSymbol<%s:%s>" % (self.source_min, self.source_max)
 
@@ -135,21 +147,23 @@ class Instrumentation:
 
     def updateSymbols(self):
         last_symbol_addr = 0
-        for addr in range(len(self.rom)):
-            if addr not in self.rom_symbols:
-                continue
-            symbol = self.rom_symbols[addr]
+        for addr, symbol in sorted(self.rom_symbols.items()):
             if isinstance(symbol, AutoSymbol):
-                bank = addr >> 14
-                local_addr = (addr & 0x3FFF) | (0x4000 if bank > 0 else 0x0000)
-                if symbol.source_min is not None and symbol.source_min > last_symbol_addr:
-                    symbol = ".jr_%03x_%04x" % (bank, local_addr)
-                else:
-                    symbol = "jr_%03x_%04x" % (bank, local_addr)
-                self.rom_symbols[addr] = symbol
-            if not symbol.startswith("."):
+                if not symbol.isGlobal() and last_symbol_addr > symbol.source_min:
+                    symbol.setAsGlobalSymbol()
+                if symbol.isGlobal():
+                    last_symbol_addr = addr
+            elif not symbol.startswith("."):
                 last_symbol_addr = addr
-
+        for addr, symbol in sorted(self.rom_symbols.items(), reverse=True):
+            if isinstance(symbol, AutoSymbol):
+                if not symbol.isGlobal() and last_symbol_addr < symbol.source_max:
+                    symbol.setAsGlobalSymbol()
+                if symbol.isGlobal():
+                    last_symbol_addr = addr
+            elif not symbol.startswith("."):
+                last_symbol_addr = addr
+        self.rom_symbols = {addr: symbol.format(addr) if isinstance(symbol, AutoSymbol) else symbol for addr, symbol in self.rom_symbols.items()}
 
     def load(self, filename):
         f = open(filename, "rb")
@@ -165,7 +179,7 @@ class Instrumentation:
         if isinstance(parameter, Ref):
             return "[%s]" % (self.formatParameter(base_address, parameter.target, pc_target=pc_target))
         if isinstance(parameter, Word):
-            return self.formatParameter(base_address, parameter.target, pc_target=pc_target)
+            return self.formatParameter(base_address, parameter.value, pc_target=pc_target)
         if isinstance(parameter, int):
             if not pc_target and parameter in self.reg_symbols:
                 return self.reg_symbols[parameter]

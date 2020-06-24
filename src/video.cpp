@@ -53,7 +53,8 @@ bool Video::update()
     {
         STAT.value &=~0x04;
     }
-    if (line < 144)
+
+    if (line < 144 && !frame_skip_counter)
     {
         SDL_LockSurface(backbuffer);
         uint32_t* line_ptr = static_cast<uint32_t*>(backbuffer->pixels);
@@ -197,9 +198,22 @@ bool Video::update()
     if (line < 153)
         return false;
 
-    SDL_BlitScaled(backbuffer, nullptr, window_surface, nullptr);
-    SDL_UpdateWindowSurface(window);
-    SDL_Delay(1);
+    if (frame_skip_counter > 0)
+    {
+        frame_skip_counter--;
+    }
+    else
+    {
+        frame_skip_counter = 0;
+
+        SDL_BlitScaled(backbuffer, nullptr, window_surface, nullptr);
+        SDL_UpdateWindowSurface(window);
+        uint32_t tick = SDL_GetTicks();
+        static uint32_t last_tick = 0;
+        if (tick - last_tick < 10)
+            SDL_Delay(10 - (tick - last_tick));
+        last_tick += 10;
+    }
     return true;
 }
 

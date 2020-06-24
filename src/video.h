@@ -56,6 +56,7 @@ public:
     Mem8Block<Mem8Ram> oam;
 
     uint32_t line_start_cycle;
+    int frame_skip_counter = 0;
 
     void init();
     bool update();

@@ -74,11 +74,11 @@ class Ref:
 
 
 class Word:
-    def __init__(self, target):
-        self.target = target
+    def __init__(self, value):
+        self.value = value
 
     def __repr__(self):
-        return "$%04x" % (self.target)
+        return "$%04x" % (self.value)
 
 
 class Instruction:
@@ -473,7 +473,7 @@ class Instruction:
 
         address = self.p0
         if isinstance(address, Word):
-            address = address.target
+            address = address.value
 
         if address >= 0x8000:  # Call to RAM/SRAM or HRAM
             return None
@@ -490,9 +490,9 @@ class Instruction:
     def format(self, info):
         p0, p1 = self.p0, self.p1
 
-        if self.type == LD and isinstance(self.p0, Ref) and isinstance(self.p0.target, Word) and self.p0.target.target >= 0xFF00 and self.p1 == A:
+        if self.type == LD and isinstance(self.p0, Ref) and isinstance(self.p0.target, Word) and self.p0.target.value >= 0xFF00 and self.p1 == A:
             return "ld_long_store %s" % (info.formatParameter(self.address, p0.target))
-        if self.type == LD and isinstance(self.p1, Ref) and isinstance(self.p1.target, Word) and self.p1.target.target >= 0xFF00 and self.p0 == A:
+        if self.type == LD and isinstance(self.p1, Ref) and isinstance(self.p1.target, Word) and self.p1.target.value >= 0xFF00 and self.p0 == A:
             return "ld_long_load %s" % (info.formatParameter(self.address, p1.target))
 
         if self.condition is not None:

@@ -66,8 +66,8 @@ if __name__ == "__main__":
 
     while todo:
         addr = todo.pop()
-        active_bank = None
         a_value = None
+        active_bank = None
 
         while True:
             if addr in done:
@@ -86,6 +86,11 @@ if __name__ == "__main__":
                     info.addRomSymbol(target)
                 todo.append(target)
 
+            if instr.type == instruction.LD and instr.p0 == instruction.A:
+                a_value = instr.p1 if isinstance(instr.p1, int) else None
+            if instr.type == instruction.LD and instr.p1 == instruction.A and isinstance(instr.p0, instruction.Ref) and isinstance(instr.p0.target, instruction.Word) and instr.p0.target.value == 0x2100:
+                active_bank = a_value
+
             if instr.type == instruction.RST and instr.p0 == args.rstJumpTable:
                 addr += 1
                 while True:
@@ -97,6 +102,7 @@ if __name__ == "__main__":
                     info.mark(addr, info.MARK_DATA | info.MARK_PTR_LOW)
                     info.mark(addr + 1, info.MARK_DATA | info.MARK_PTR_HIGH)
                     info.mark(target, info.MARK_INSTR)
+                    info.addRomSymbol(target)
                     todo.append(target)
                     addr += 2
                 break
