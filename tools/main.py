@@ -43,12 +43,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("rom", type=str)
     parser.add_argument("--rstJumpTable", type=int, default=None)
+    parser.add_argument("--instrumentation", action='append', default=[])
     args = parser.parse_args()
     rom = ROM(args.rom)
     info = Instrumentation(rom)
+    for filename in args.instrumentation:
+        info.load(filename)
 
     done = set()
     todo = [0x0100, 0x0000, 0x0040, 0x0048, 0x0050, 0x0058, 0x0060]
+    for addr in range(len(rom.data)):
+        if info.hasMark(addr, info.MARK_INSTR) and not info.hasMark(addr, info.MARK_DATA):
+            todo.append(addr)
 
     while todo:
         addr = todo.pop()
@@ -92,14 +98,21 @@ if __name__ == "__main__":
             addr += instr.size
 
     info.updateSymbols()
-    # info.dumpStats()
+    info.dumpStats()
 
+    output = open("out.asm", "wt")
     def out(addr, size, data):
-        print("    %-30s ; $%04x" % (data, addr))
+        bank = addr >> 14
+        if bank > 0:
+            addr = (addr & 0x3FFF) | 0x4000
+        output.write("    %-50s ; $%02x:$%04x" % (data, bank, addr))
+        for n in range(size):
+            output.write(" $%02x" % (rom.data[addr+n]))
+        output.write("\n")
 
     addr = 0
-    info.printRegs()
-    print("""
+    info.outputRegs(output)
+    output.write("""
 ld_long_load: MACRO
     db $FA
     dw \\1
@@ -110,30 +123,36 @@ ld_long_store: MACRO
 ENDM
 """)
     for bank in range(len(rom.data) // 0x4000):
-        print("")
         if bank == 0:
-            print("SECTION \"bank00\", ROM0[$0000]")
+            output.write("\nSECTION \"bank00\", ROM0[$0000]\n")
         else:
-            print("SECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]" % (bank, bank))
+            output.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
         addr = 0x4000 * bank
         end_of_bank = addr + 0x4000
+        while end_of_bank > addr and rom.data[end_of_bank-1] == 0x00:
+            end_of_bank -= 1
         while addr < end_of_bank:
             if addr in info.rom_symbols:
                 if not info.rom_symbols[addr].startswith("."):
-                    print("")
-                print("%s:" % (info.rom_symbols[addr]))
+                    output.write("\n")
+                output.write("%s:\n" % (info.rom_symbols[addr]))
             if info.hasMark(addr, info.MARK_INSTR):
                 instr = Instruction(rom, addr)
                 out(addr, instr.size, instr.format(info))
                 addr += instr.size
+            elif info.hasMark(addr, info.MARK_PTR_LOW) and info.hasMark(addr + 1, info.MARK_PTR_HIGH):
+                pointer = rom.data[addr] | (rom.data[addr+1] << 8)
+                size = 2
+                out(addr, size, "dw   %s" % info.formatParameter(addr, pointer))
+                addr += size
             else:
                 size = 1
-                while size < 8 and addr + size < end_of_bank and addr + size not in info.rom_symbols and not info.hasMark(addr + size, info.MARK_INSTR):
+                while size < 8 and addr + size < end_of_bank and addr + size not in info.rom_symbols and not (info.hasMark(addr + size, info.MARK_INSTR) or info.hasMark(addr + size, info.MARK_PTR_LOW)):
                     size += 1
                 if info.hasMark(addr - 1, info.MARK_INSTR) and not any(rom.data[addr:addr+size]):
-                    while addr + size < end_of_bank and not info.hasMark(addr + size, info.MARK_INSTR) and rom.data[addr+size] == 0 and addr + size not in info.rom_symbols:
+                    while addr + size < end_of_bank and not (info.hasMark(addr + size, info.MARK_INSTR) or info.hasMark(addr + size, info.MARK_PTR_LOW)) and rom.data[addr+size] == 0 and addr + size not in info.rom_symbols:
                         size += 1
-                    out(addr, size, "ds   %d" % (size))
+                    out(addr, 0, "ds   %d" % (size))
                 else:
-                    out(addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
+                    out(addr, 0, "db   " + ", ".join(map(lambda n: "$%02x" % (n), rom.data[addr:addr+size])))
                 addr += size

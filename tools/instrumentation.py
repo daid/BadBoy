@@ -20,6 +20,7 @@ class AutoSymbol:
     def __repr__(self):
         return "AutoSymbol<%s:%s>" % (self.source_min, self.source_max)
 
+
 class Instrumentation:
     ID_MASK = (0xFF << 32)
     ID_ROM = (0x00 << 32)
@@ -175,13 +176,33 @@ class Instrumentation:
             return "$%02x" % (parameter)
         return parameter
 
-    def printRegs(self):
+    def outputRegs(self, file):
         for value, name in self.reg_symbols.items():
-            print("%s EQU $%04x" % (name, value))
+            file.write("%-14s EQU $%04x\n" % (name, value))
 
     def dumpStats(self):
-        stats = {}
-        for marks in self.rom:
-            mark = (marks & self.MARK_MASK) >> 40
-            stats[mark] = stats.get(mark, 0) + 1
-        print(stats)
+        total = {}
+        for bank in range(len(self.rom) // 0x4000):
+            stats = {}
+            start = bank*0x4000
+            end = start+0x4000
+            for addr in range(start, end):
+                mark = self.rom[addr]
+                basic_type = 'unknown'
+                if mark & self.MARK_INSTR:
+                    basic_type = 'instruction'
+                elif (mark & self.MARK_DATA) and (mark & self.ID_MASK) == self.ID_VRAM:
+                    if (mark & 0xFFFF) < 0x1800:
+                        basic_type = 'vram:tile'
+                    else:
+                        basic_type = 'vram:data'
+                elif mark & self.MARK_DATA:
+                    basic_type = 'data'
+                stats[basic_type] = stats.get(basic_type, 0) + 1
+                total[basic_type] = total.get(basic_type, 0) + 1
+            print("Bank: %02x" % (bank))
+            for k, v in sorted(stats.items()):
+                print("  %s: %d (%f%%)" % (k, v, v * 100 / 0x4000))
+        print("Total:")
+        for k, v in sorted(total.items()):
+            print("  %s: %d (%f%%)" % (k, v, v * 100 / len(self.rom)))
