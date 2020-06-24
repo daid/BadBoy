@@ -13,6 +13,9 @@ public:
 
     bool quit = false;
 private:
+    FILE* replay_file = nullptr;
+    bool replay_playback = false;
+
     uint8_t directions = 0x00;
     uint8_t buttons = 0x00;
     uint8_t mode = 0xFF;

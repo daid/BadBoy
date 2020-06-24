@@ -466,22 +466,26 @@ class Instruction:
         return True
 
     def jumpTarget(self, active_bank=None):
-        if self.type in (CALL, JP, JR) and self.p0 != HL:
-            address = self.p0
-            if isinstance(address, Word):
-                address = address.target
-            if address >= 0x8000:  # Call to RAM/SRAM or HRAM
+        if self.type not in (CALL, JP, JR):
+            return None
+        if self.p0 == HL:
+            return None
+
+        address = self.p0
+        if isinstance(address, Word):
+            address = address.target
+
+        if address >= 0x8000:  # Call to RAM/SRAM or HRAM
+            return None
+
+        if address >= 0x4000:  # Correct the address for the proper bank
+            if self.address >= 0x4000:  # Call from bank 0 towards other banks
+                active_bank = self.address >> 14
+            if active_bank is None:
+                print("Call from 00:%04x to $%04x, without knowning active bank" % (self.address, address))
                 return None
-            if address >= 0x4000:  # Correct the address for the proper bank
-                if self.address < 0x4000:  # Call from bank 0 towards other banks
-                    if active_bank is None:
-                        print("Call from 00:%04x to $%04x, without knowning active bank" % (self.address, address))
-                        return None
-                    address = (active_bank << 14) | (address & 0x3FFF)
-                else:
-                    address = (self.address & 0xFFC000) | (address & 0x3FFF)
-            return address
-        return None
+            address = (active_bank << 14) | (address & 0x3FFF)
+        return address
 
     def format(self, info):
         p0, p1 = self.p0, self.p1

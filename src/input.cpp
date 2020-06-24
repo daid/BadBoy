@@ -21,7 +21,11 @@ void Input::setImpl(uint8_t value)
 
 void Input::setReplayFile(const char* filename, bool playback)
 {
-    printf("Replay functionality not yet implemented\n");
+    if (playback)
+        replay_file = fopen(filename, "rb");
+    else
+        replay_file = fopen(filename, "wb");
+    replay_playback = playback;
 }
 
 void Input::update()
@@ -54,6 +58,24 @@ void Input::update()
             if (e.key.keysym.sym == SDLK_a) buttons &=~0x02;
             if (e.key.keysym.sym == SDLK_s) buttons &=~0x01;
             break;
+        }
+    }
+    if (replay_file)
+    {
+        uint8_t data = (directions << 4) | (buttons & 0x0F);
+        if (replay_playback)
+        {
+            if (fread(&data, 1, 1, replay_file) < 1)
+            {
+                fclose(replay_file);
+                replay_file = nullptr;
+            }
+            directions = data >> 4;
+            buttons = data & 0x0F;
+        }
+        else
+        {
+            fwrite(&data, 1, 1, replay_file);
         }
     }
 }
