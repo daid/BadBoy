@@ -30,10 +30,18 @@ void Video::init()
 
 bool Video::update()
 {
-    if (cpu.cycles < line_start_cycle + 456 * cpu.speed)
+    uint32_t video_cycle = line_start_cycle - cpu.cycles;
+    uint8_t line = LY.get();
+    STAT.value &= 0xFC;
+    if (line >= 144)
+        STAT.value |= 0x01;
+    else if (video_cycle < 80 * cpu.speed)
+        STAT.value |= 0x02;
+    else if (video_cycle < 300 * cpu.speed)
+        STAT.value |= 0x03;
+    if (video_cycle < 456 * cpu.speed)
         return false;
     line_start_cycle += 456 * cpu.speed;
-    uint8_t line = LY.get();
     LY.set((line + 1) % 154);
     if (line == LYC.value)
     {
