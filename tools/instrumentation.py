@@ -249,8 +249,23 @@ class Instrumentation:
         return parameter
 
     def outputRegs(self, file):
-        for value, name in self.reg_symbols.items():
+        for value, name in sorted(self.reg_symbols.items()):
             file.write("%-14s EQU $%04x\n" % (name, value))
+
+    def outputRam(self, file):
+        file.write("\nSECTION \"WRAM Bank0\", WRAM0[$c000]\n")
+        addr = 0xC000
+        for value, name in sorted(self.ram_symbols.items()):
+            if addr < 0xD000 and value >= 0xD000:
+                file.write("\nSECTION \"WRAM Bank1\", WRAMX[$d000], BANK[$01]\n")
+                addr = 0xD000
+            if addr < 0xFF80 and value >= 0xFF80:
+                file.write("\nSECTION \"HRAM\", HRAM\n")
+                addr = 0xFF80
+            if addr < value:
+                file.write("  ds %d\n" % (value - addr))
+            file.write("%s: ;; $%04x\n" % (name, value))
+            addr = value
 
     def dumpStats(self):
         total = {}

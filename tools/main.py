@@ -195,6 +195,7 @@ if __name__ == "__main__":
 
     addr = 0
     dis.info.outputRegs(output)
+    dis.info.outputRam(output)
     output.write("""
 ld_long_load: MACRO
     db $FA
