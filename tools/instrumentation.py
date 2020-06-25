@@ -20,14 +20,19 @@ class AutoSymbol:
     def isGlobal(self):
         return self.source_min is None
 
-    def format(self, addr):
+    def format(self, addr, flags):
         bank = addr >> 14
         addr &= 0x3FFF
         if bank > 0:
             addr |= 0x4000
+        type_name = "unknown"
+        if flags & Instrumentation.MARK_INSTR:
+            type_name = "code"
+        if flags & Instrumentation.MARK_DATA:
+            type_name = "data"
         if self.source_min is not None:
-            return ".jr_%04x" % (addr)
-        return "jp_%03x_%04x" % (bank, addr)
+            return ".%s_%04x" % (type_name, addr)
+        return "%s_%03x_%04x" % (type_name, bank, addr)
 
     def __repr__(self):
         return "AutoSymbol<%s:%s>" % (self.source_min, self.source_max)
@@ -134,7 +139,7 @@ class Instrumentation:
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
 
-    def addRomSymbol(self, address, source_address=None):
+    def addAbsoluteRomSymbol(self, address, source_address=None):
         symbol = self.rom_symbols.get(address, None)
         if not symbol:
             symbol = AutoSymbol(source_address)
@@ -144,6 +149,15 @@ class Instrumentation:
                 symbol.addLocalSource(source_address)
             else:
                 symbol.setAsGlobalSymbol()
+
+    def addRelativeRomSymbol(self, address, source_address):
+        if address < 0x1000 or address >= 0x8000:
+            return
+        if address >= 0x4000:
+            if source_address < 0x4000:
+                return
+            address = (address & 0x3fff) | (source_address & 0xFFFFC000)
+        self.addAbsoluteRomSymbol(address)
 
     def updateSymbols(self):
         last_symbol_addr = 0
@@ -163,7 +177,7 @@ class Instrumentation:
                     last_symbol_addr = addr
             elif not symbol.startswith("."):
                 last_symbol_addr = addr
-        self.rom_symbols = {addr: symbol.format(addr) if isinstance(symbol, AutoSymbol) else symbol for addr, symbol in self.rom_symbols.items()}
+        self.rom_symbols = {addr: symbol.format(addr, self.rom[addr]) if isinstance(symbol, AutoSymbol) else symbol for addr, symbol in self.rom_symbols.items()}
 
     def load(self, filename):
         f = open(filename, "rb")

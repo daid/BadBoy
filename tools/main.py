@@ -60,9 +60,9 @@ if __name__ == "__main__":
             if info.hasMark(addr, info.MARK_PTR_LOW) and info.hasMark(addr + 1, info.MARK_PTR_HIGH):
                 target = rom.data[addr] | (rom.data[addr + 1] << 8)
                 if target < 0x4000:
-                    info.addRomSymbol(target)
+                    info.addAbsoluteRomSymbol(target)
                 elif target < 0x8000:
-                    info.addRomSymbol((target & 0x3FFF) | (addr & 0xFFFFC000))
+                    info.addAbsoluteRomSymbol((target & 0x3FFF) | (addr & 0xFFFFC000))
 
     while todo:
         addr = todo.pop()
@@ -81,10 +81,18 @@ if __name__ == "__main__":
             target = instr.jumpTarget(active_bank)
             if target:
                 if instr.type == instruction.JR:
-                    info.addRomSymbol(target, addr)
+                    info.addAbsoluteRomSymbol(target, addr)
                 else:
-                    info.addRomSymbol(target)
+                    info.addAbsoluteRomSymbol(target)
                 todo.append(target)
+            elif isinstance(instr.p0, instruction.Word):
+                info.addRelativeRomSymbol(instr.p0.value, addr)
+            elif isinstance(instr.p1, instruction.Word):
+                info.addRelativeRomSymbol(instr.p1.value, addr)
+            elif isinstance(instr.p0, instruction.Ref) and isinstance(instr.p0.target, instruction.Word):
+                info.addRelativeRomSymbol(instr.p0.target.value, addr)
+            elif isinstance(instr.p1, instruction.Ref) and isinstance(instr.p1.target, instruction.Word):
+                info.addRelativeRomSymbol(instr.p1.target.value, addr)
 
             if instr.type == instruction.LD and instr.p0 == instruction.A:
                 a_value = instr.p1 if isinstance(instr.p1, int) else None
@@ -102,7 +110,7 @@ if __name__ == "__main__":
                     info.mark(addr, info.MARK_DATA | info.MARK_PTR_LOW)
                     info.mark(addr + 1, info.MARK_DATA | info.MARK_PTR_HIGH)
                     info.mark(target, info.MARK_INSTR)
-                    info.addRomSymbol(target)
+                    info.addAbsoluteRomSymbol(target)
                     todo.append(target)
                     addr += 2
                 break
