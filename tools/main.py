@@ -126,13 +126,13 @@ class Disassembler:
                     info.addAbsoluteRomSymbol(target)
                 self.instr_addr_todo.append(target)
             elif isinstance(instr.p0, instruction.Word):
-                info.addRelativeRomSymbol(instr.p0.value, addr)
+                info.addRelativeSymbol(instr.p0.value, addr)
             elif isinstance(instr.p1, instruction.Word):
-                info.addRelativeRomSymbol(instr.p1.value, addr)
+                info.addRelativeSymbol(instr.p1.value, addr)
             elif isinstance(instr.p0, instruction.Ref) and isinstance(instr.p0.target, instruction.Word):
-                info.addRelativeRomSymbol(instr.p0.target.value, addr)
+                info.addRelativeSymbol(instr.p0.target.value, addr)
             elif isinstance(instr.p1, instruction.Ref) and isinstance(instr.p1.target, instruction.Word):
-                info.addRelativeRomSymbol(instr.p1.target.value, addr)
+                info.addRelativeSymbol(instr.p1.target.value, addr)
 
             if instr.type == instruction.LD and instr.p0 == instruction.A:
                 a_value = instr.p1 if isinstance(instr.p1, int) else None

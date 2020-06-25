@@ -148,6 +148,8 @@ class Instrumentation:
             return "?"
         id = self.rom[addr] & self.ID_MASK
         if id == self.ID_VRAM:
+            if (mark & 0x3FFF) < 0x1800:
+                return "S"
             return "V"
         if id == self.ID_OAM:
             if (mark & 0x03) == 0x00:
@@ -158,6 +160,13 @@ class Instrumentation:
                 return "T"
             return "A"
         return "."
+
+    def addRamSymbol(self, address):
+        if address not in self.ram_symbols:
+            if address >= 0xFF80:
+                self.ram_symbols[address] = "h%04X" % (address)
+            else:
+                self.ram_symbols[address] = "w%04X" % (address)
 
     def addAbsoluteRomSymbol(self, address, source_address=None):
         symbol = self.rom_symbols.get(address, None)
@@ -170,8 +179,14 @@ class Instrumentation:
             else:
                 symbol.setAsGlobalSymbol()
 
-    def addRelativeRomSymbol(self, address, source_address):
-        if address < 0x1000 or address >= 0x8000:
+    def addRelativeSymbol(self, address, source_address):
+        if address < 0x1000:
+            return
+        if address >= 0xC000 and address < 0xE000:
+            self.addRamSymbol(address)
+        if address >= 0xFF80 and address < 0xFFFF:
+            self.addRamSymbol(address)
+        if address >= 0x8000:
             return
         if address >= 0x4000:
             if source_address < 0x4000:
