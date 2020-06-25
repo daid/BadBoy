@@ -15,7 +15,7 @@ class AutoSymbol:
         if self.source_min is None:
             return
         self.source_min = min(self.source_min, address)
-        self.source_max = min(self.source_max, address)
+        self.source_max = max(self.source_max, address)
 
     def isGlobal(self):
         return self.source_min is None
@@ -35,7 +35,7 @@ class AutoSymbol:
         return "%s_%03x_%04x" % (type_name, bank, addr)
 
     def __repr__(self):
-        return "AutoSymbol<%s:%s>" % (self.source_min, self.source_max)
+        return "AutoSymbol<%x:%x>" % (self.source_min, self.source_max)
 
 
 class Instrumentation:
@@ -136,13 +136,33 @@ class Instrumentation:
     def mark(self, address, mark):
         self.rom[address] |= mark
 
+    def getMarks(self, address, marks):
+        return self.rom[address] & marks
+
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
+
+    def classifyData(self, addr):
+        mark = self.rom[addr]
+        if not (mark & self.MARK_DATA):
+            return "?"
+        id = self.rom[addr] & self.ID_MASK
+        if id == self.ID_VRAM:
+            return "V"
+        if id == self.ID_OAM:
+            if (mark & 0x03) == 0x00:
+                return "Y"
+            if (mark & 0x03) == 0x01:
+                return "X"
+            if (mark & 0x03) == 0x02:
+                return "T"
+            return "A"
+        return "."
 
     def addAbsoluteRomSymbol(self, address, source_address=None):
         symbol = self.rom_symbols.get(address, None)
         if not symbol:
-            symbol = AutoSymbol(source_address)
+            symbol = AutoSymbol(address)
             self.rom_symbols[address] = symbol
         if isinstance(symbol, AutoSymbol):
             if source_address is not None:
@@ -160,24 +180,29 @@ class Instrumentation:
         self.addAbsoluteRomSymbol(address)
 
     def updateSymbols(self):
-        last_symbol_addr = 0
-        for addr, symbol in sorted(self.rom_symbols.items()):
-            if isinstance(symbol, AutoSymbol):
-                if not symbol.isGlobal() and last_symbol_addr > symbol.source_min:
-                    symbol.setAsGlobalSymbol()
-                if symbol.isGlobal():
+        changes = True
+        while changes:
+            changes = False
+            last_symbol_addr = 0
+            for addr, symbol in sorted(self.rom_symbols.items()):
+                if isinstance(symbol, AutoSymbol):
+                    if not symbol.isGlobal() and last_symbol_addr > symbol.source_min:
+                        symbol.setAsGlobalSymbol()
+                        changes = True
+                    if symbol.isGlobal():
+                        last_symbol_addr = addr
+                elif not symbol.startswith("."):
                     last_symbol_addr = addr
-            elif not symbol.startswith("."):
-                last_symbol_addr = addr
-        for addr, symbol in sorted(self.rom_symbols.items(), reverse=True):
-            if isinstance(symbol, AutoSymbol):
-                if not symbol.isGlobal() and last_symbol_addr < symbol.source_max:
-                    symbol.setAsGlobalSymbol()
-                if symbol.isGlobal():
+            for addr, symbol in sorted(self.rom_symbols.items(), reverse=True):
+                if isinstance(symbol, AutoSymbol):
+                    if not symbol.isGlobal() and last_symbol_addr < symbol.source_max:
+                        symbol.setAsGlobalSymbol()
+                        changes = True
+                    if symbol.isGlobal():
+                        last_symbol_addr = addr
+                elif not symbol.startswith("."):
                     last_symbol_addr = addr
-            elif not symbol.startswith("."):
-                last_symbol_addr = addr
-        self.rom_symbols = {addr: symbol.format(addr, self.rom[addr]) if isinstance(symbol, AutoSymbol) else symbol for addr, symbol in self.rom_symbols.items()}
+        self.rom_symbols = {addr: symbol.format(addr, self.rom[addr]) if isinstance(symbol, AutoSymbol) else symbol for addr, symbol in self.rom_symbols.items() if not self.hasMark(addr, self.MARK_INSTR | self.MARK_DATA)}
 
     def load(self, filename):
         f = open(filename, "rb")

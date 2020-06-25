@@ -1,4 +1,6 @@
 #include "mem8.h"
+#include "card.h"
+
 
 void Mem8::set(uint8_t value)
 {
@@ -20,12 +22,14 @@ void Mem8::set(Mem8& other)
 void Mem8::mark(uint64_t mark)
 {
     used_as |= mark;
+    used_as &=~MARK_BANK_MASK;
+    used_as |= uint64_t(card.rom_upper_bank) << MARK_BANK_SHIFT;
 }
 
 void Mem8::markOrigin(uint64_t mark)
 {
     if (origin)
-        origin->used_as |= mark;
+        origin->mark(mark);
 }
 
 void Mem8::dumpInstrumentation(FILE* f) const

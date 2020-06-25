@@ -18,6 +18,8 @@
 #define MARK_DATA     (0x02LL << 40)
 #define MARK_PTR_LOW  (0x04LL << 40)
 #define MARK_PTR_HIGH (0x08LL << 40)
+#define MARK_BANK_SHIFT (48)
+#define MARK_BANK_MASK  (0xFFFLL << MARK_BANK_SHIFT)
 
 class Mem8
 {
