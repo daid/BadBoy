@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include "video.h"
+#include "input.h"
 #include "cpu.h"
 #include "mm.h"
 
@@ -210,9 +211,15 @@ bool Video::update()
         SDL_UpdateWindowSurface(window);
         uint32_t tick = SDL_GetTicks();
         static uint32_t last_tick = 0;
-        if (tick - last_tick < 10)
-            SDL_Delay(10 - (tick - last_tick));
-        last_tick += 10;
+        if (input.fast_forward)
+        {
+            last_tick = tick;
+            frame_skip_counter = input.fast_forward;
+        }else{
+            if (tick - last_tick < 10)
+                SDL_Delay(10 - (tick - last_tick));
+            last_tick += 10;
+        }
     }
     return true;
 }

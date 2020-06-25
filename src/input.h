@@ -12,6 +12,7 @@ public:
     void update();
 
     bool quit = false;
+    int fast_forward = 0;
 private:
     FILE* replay_file = nullptr;
     bool replay_playback = false;

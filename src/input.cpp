@@ -46,6 +46,9 @@ void Input::update()
             if (e.key.keysym.sym == SDLK_RSHIFT) buttons |= 0x04;
             if (e.key.keysym.sym == SDLK_a) buttons |= 0x02;
             if (e.key.keysym.sym == SDLK_s) buttons |= 0x01;
+
+            if (e.key.keysym.sym == SDLK_TAB) fast_forward = 1;
+            if (e.key.keysym.sym == SDLK_BACKSPACE) fast_forward = 100;
             break;
         case SDL_KEYUP:
             if (e.key.keysym.sym == SDLK_DOWN) directions &=~0x08;
@@ -57,6 +60,9 @@ void Input::update()
             if (e.key.keysym.sym == SDLK_RSHIFT) buttons &=~0x04;
             if (e.key.keysym.sym == SDLK_a) buttons &=~0x02;
             if (e.key.keysym.sym == SDLK_s) buttons &=~0x01;
+
+            if (e.key.keysym.sym == SDLK_TAB) fast_forward = 0;
+            if (e.key.keysym.sym == SDLK_BACKSPACE) fast_forward = 0;
             break;
         }
     }
@@ -68,7 +74,9 @@ void Input::update()
             if (fread(&data, 1, 1, replay_file) < 1)
             {
                 fclose(replay_file);
+                printf("Replay playback done.\n");
                 replay_file = nullptr;
+                fast_forward = 0;
             }
             directions = data >> 4;
             buttons = data & 0x0F;
