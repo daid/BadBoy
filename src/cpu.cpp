@@ -249,23 +249,27 @@ void Cpu::execute(const Opcode& opcode)
         break;
 
     case Opcode::PUSH16:
-        mm::get(getSP() - 1).set(opcode.dst_h->get());
-        mm::get(getSP() - 2).set(opcode.dst_l->get());
+        mm::get(getSP() - 1).set(*opcode.dst_h);
+        mm::get(getSP() - 2).set(*opcode.dst_l);
         setSP(getSP() - 2);
         break;
     case Opcode::POP16:
-        opcode.dst_l->set(mm::get(getSP()).get());
-        opcode.dst_h->set(mm::get(getSP() + 1).get());
+        opcode.dst_l->set(mm::get(getSP()));
+        opcode.dst_h->set(mm::get(getSP() + 1));
         setSP(getSP() + 2);
         break;
 
     case Opcode::RET:
+        mm::get(getSP()).markOrigin(MARK_PTR_LOW);
+        mm::get(getSP()+1).markOrigin(MARK_PTR_HIGH);
         pc = mm::get(getSP()).get() | (mm::get(getSP()+1).get() << 8);
         setSP(getSP() + 2);
         break;
     case Opcode::RETZ:
         if (F.Z)
         {
+            mm::get(getSP()).markOrigin(MARK_PTR_LOW);
+            mm::get(getSP()+1).markOrigin(MARK_PTR_HIGH);
             pc = mm::get(getSP()).get() | (mm::get(getSP()+1).get() << 8);
             setSP(getSP() + 2);
             cycles += 12;
@@ -274,6 +278,8 @@ void Cpu::execute(const Opcode& opcode)
     case Opcode::RETC:
         if (F.C)
         {
+            mm::get(getSP()).markOrigin(MARK_PTR_LOW);
+            mm::get(getSP()+1).markOrigin(MARK_PTR_HIGH);
             pc = mm::get(getSP()).get() | (mm::get(getSP()+1).get() << 8);
             setSP(getSP() + 2);
             cycles += 12;
@@ -282,6 +288,8 @@ void Cpu::execute(const Opcode& opcode)
     case Opcode::RETNZ:
         if (!F.Z)
         {
+            mm::get(getSP()).markOrigin(MARK_PTR_LOW);
+            mm::get(getSP()+1).markOrigin(MARK_PTR_HIGH);
             pc = mm::get(getSP()).get() | (mm::get(getSP()+1).get() << 8);
             setSP(getSP() + 2);
             cycles += 12;
@@ -290,12 +298,16 @@ void Cpu::execute(const Opcode& opcode)
     case Opcode::RETNC:
         if (!F.C)
         {
+            mm::get(getSP()).markOrigin(MARK_PTR_LOW);
+            mm::get(getSP()+1).markOrigin(MARK_PTR_HIGH);
             pc = mm::get(getSP()).get() | (mm::get(getSP()+1).get() << 8);
             setSP(getSP() + 2);
             cycles += 12;
         }
         break;
     case Opcode::RETI:
+        mm::get(getSP()).markOrigin(MARK_PTR_LOW);
+        mm::get(getSP()+1).markOrigin(MARK_PTR_HIGH);
         pc = mm::get(getSP()).get() | (mm::get(getSP()+1).get() << 8);
         setSP(getSP() + 2);
         ime = true;

@@ -329,8 +329,8 @@ class Instruction:
 
         if op == 0xC0: self.__set(RET, condition=COND_NZ)
         if op == 0xD0: self.__set(RET, condition=COND_NC)
-        if op == 0xE0: self.__set(LDH, Ref(0xFF00 | self.__getUInt8()), A)
-        if op == 0xF0: self.__set(LDH, A, Ref(0xFF00 | self.__getUInt8()))
+        if op == 0xE0: self.__set(LDH, Ref(Word(0xFF00 | self.__getUInt8())), A)
+        if op == 0xF0: self.__set(LDH, A, Ref(Word(0xFF00 | self.__getUInt8())))
 
         if op == 0xC1: self.__set(POP, BC)
         if op == 0xD1: self.__set(POP, DE)

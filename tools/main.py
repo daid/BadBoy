@@ -113,6 +113,7 @@ class Disassembler:
                 break
             self.instr_addr_done.add(addr)
             instr = Instruction(self.rom, addr)
+            active_bank = info.getActiveBank(addr) or active_bank
 
             info.mark(addr, info.MARK_INSTR)
             for n in range(1, instr.size):

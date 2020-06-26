@@ -52,6 +52,8 @@ class Instrumentation:
     MARK_DATA = (0x02 << 40)
     MARK_PTR_LOW = (0x04 << 40)
     MARK_PTR_HIGH = (0x08 << 40)
+    MARK_BANK_SHIFT = (48)
+    MARK_BANK_MASK = (0xFFF << 48)
 
     def __init__(self, rom):
         self.rom = [0] * len(rom.data)
@@ -141,6 +143,12 @@ class Instrumentation:
 
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
+
+    def getActiveBank(self, addr):
+        bank = (self.rom[addr] & self.MARK_BANK_MASK) >> self.MARK_BANK_SHIFT
+        if bank == 0:
+            return None
+        return bank
 
     def classifyData(self, addr):
         mark = self.rom[addr]
