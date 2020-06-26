@@ -5,6 +5,7 @@ import instruction
 import struct
 import PIL.Image
 import argparse
+import os
 
 
 def exportAllAsGraphics(rom):
@@ -80,6 +81,7 @@ class Disassembler:
 
         self.instr_addr_done = set()
         self.instr_addr_todo = [0x0100, 0x0000, 0x0040, 0x0048, 0x0050, 0x0058, 0x0060]
+        self.rstJumpTable = None
 
     def loadInstrumentation(self, filename):
         self.info.load(filename)
@@ -140,7 +142,7 @@ class Disassembler:
             if instr.type == instruction.LD and instr.p1 == instruction.A and isinstance(instr.p0, instruction.Ref) and isinstance(instr.p0.target, instruction.Word) and instr.p0.target.value == 0x2100:
                 active_bank = a_value
 
-            if instr.type == instruction.RST and instr.p0 == args.rstJumpTable:
+            if instr.type == instruction.RST and instr.p0 == self.rstJumpTable:
                 addr += 1
                 while True:
                     if info.hasMark(addr, info.MARK_INSTR):
@@ -152,7 +154,7 @@ class Disassembler:
                     info.mark(addr + 1, info.MARK_DATA | info.MARK_PTR_HIGH)
                     info.mark(target, info.MARK_INSTR)
                     info.addAbsoluteRomSymbol(target)
-                    todo.append(target)
+                    self.instr_addr_todo.append(target)
                     addr += 2
                 break
 
@@ -160,44 +162,16 @@ class Disassembler:
                 break
             addr += instr.size
 
+    def export(self, path):
+        os.makedirs(path, exist_ok=True)
+        main = open(os.path.join(path, "main.asm"), "wt")
+        main.write("include \"regs.asm\"\n")
+        main.write("include \"memory.asm\"\n")
+        main.write("include \"macros.asm\"\n")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("rom", type=str)
-    parser.add_argument("--rstJumpTable", type=int, default=None)
-    parser.add_argument("--instrumentation", action='append', default=[])
-    args = parser.parse_args()
-
-    dis = Disassembler(args.rom)
-    for filename in args.instrumentation:
-        dis.loadInstrumentation(filename)
-
-    dis.parseFullRom()
-    dis.walkInstructionBlocks()
-
-    dis.info.updateSymbols()
-    dis.info.dumpStats()
-
-    output = open("out.asm", "wt")
-    def out(addr, size, data, is_data=False):
-        bank = addr >> 14
-        sub_addr = addr
-        if bank > 0:
-            sub_addr = (addr & 0x3FFF) | 0x4000
-        output.write("    %-50s ;; $%02x:$%04x" % (data, bank, sub_addr))
-        if is_data:
-            output.write(" ")
-            for n in range(size):
-                output.write(dis.info.classifyData(addr+n))
-        else:
-            for n in range(size):
-                output.write(" $%02x" % (dis.rom.data[addr+n]))
-        output.write("\n")
-
-    addr = 0
-    dis.info.outputRegs(output)
-    dis.info.outputRam(output)
-    output.write("""
+        self.info.outputRegs(open(os.path.join(path, "regs.asm"), "wt"))
+        self.info.outputRam(open(os.path.join(path, "memory.asm"), "wt"))
+        open(os.path.join(path, "macros.asm"), "wt").write("""
 ld_long_load: MACRO
     db $FA
     dw \\1
@@ -207,37 +181,78 @@ ld_long_store: MACRO
     dw \\1
 ENDM
 """)
-    for bank in range(len(dis.rom.data) // 0x4000):
-        if bank == 0:
-            output.write("\nSECTION \"bank00\", ROM0[$0000]\n")
-        else:
-            output.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
+        for bank in range(len(self.rom.data) // 0x4000):
+            if bank == 0:
+                main.write("\nSECTION \"bank00\", ROM0[$0000]\n")
+            else:
+                main.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
+            main.write("include \"bank%02x.asm\"\n" % (bank))
+            self._writeBank(bank, open(os.path.join(path, "bank%02x.asm" % (bank)), "wt"))
+
+    def _writeBank(self, bank, output):
         addr = 0x4000 * bank
         end_of_bank = addr + 0x4000
-        while end_of_bank > addr and dis.rom.data[end_of_bank-1] == 0x00:
+        while end_of_bank > addr and self.rom.data[end_of_bank-1] == 0x00:
             end_of_bank -= 1
         while addr < end_of_bank:
-            if addr in dis.info.rom_symbols:
-                if not dis.info.rom_symbols[addr].startswith("."):
+            if addr in self.info.rom_symbols:
+                if not self.info.rom_symbols[addr].startswith("."):
                     output.write("\n")
-                output.write("%s:\n" % (dis.info.rom_symbols[addr]))
-            if dis.info.hasMark(addr, dis.info.MARK_INSTR):
-                instr = Instruction(dis.rom, addr)
-                out(addr, instr.size, instr.format(dis.info))
+                output.write("%s:\n" % (self.info.rom_symbols[addr]))
+            if self.info.hasMark(addr, self.info.MARK_INSTR):
+                instr = Instruction(self.rom, addr)
+                self.formatLine(output, addr, instr.size, instr.format(self.info))
                 addr += instr.size
-            elif dis.info.hasMark(addr, dis.info.MARK_PTR_LOW) and dis.info.hasMark(addr + 1, dis.info.MARK_PTR_HIGH):
-                pointer = dis.rom.data[addr] | (dis.rom.data[addr+1] << 8)
+            elif self.info.hasMark(addr, self.info.MARK_PTR_LOW) and self.info.hasMark(addr + 1, self.info.MARK_PTR_HIGH):
+                pointer = self.rom.data[addr] | (self.rom.data[addr+1] << 8)
                 size = 2
-                out(addr, size, "dw   %s" % dis.info.formatParameter(addr, pointer))
+                self.formatLine(output, addr, size, "dw   %s" % self.info.formatParameter(addr, pointer))
                 addr += size
             else:
                 size = 1
-                while size < 8 and addr + size < end_of_bank and addr + size not in dis.info.rom_symbols and not (dis.info.hasMark(addr + size, dis.info.MARK_INSTR) or dis.info.hasMark(addr + size, dis.info.MARK_PTR_LOW)):
+                while size < 8 and addr + size < end_of_bank and addr + size not in self.info.rom_symbols and not (self.info.hasMark(addr + size, self.info.MARK_INSTR) or self.info.hasMark(addr + size, self.info.MARK_PTR_LOW)):
                     size += 1
-                if dis.info.hasMark(addr - 1, dis.info.MARK_INSTR) and not any(dis.rom.data[addr:addr+size]):
-                    while addr + size < end_of_bank and not (dis.info.hasMark(addr + size, dis.info.MARK_INSTR) or dis.info.hasMark(addr + size, dis.info.MARK_PTR_LOW)) and dis.rom.data[addr+size] == 0 and addr + size not in dis.info.rom_symbols:
+                if self.info.hasMark(addr - 1, self.info.MARK_INSTR) and not any(self.rom.data[addr:addr+size]):
+                    while addr + size < end_of_bank and not (self.info.hasMark(addr + size, self.info.MARK_INSTR) or self.info.hasMark(addr + size, self.info.MARK_PTR_LOW)) and self.rom.data[addr+size] == 0 and addr + size not in self.info.rom_symbols:
                         size += 1
-                    out(addr, 0, "ds   %d" % (size))
+                    self.formatLine(output, addr, 0, "ds   %d" % (size))
                 else:
-                    out(addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), dis.rom.data[addr:addr+size])), is_data=True)
+                    self.formatLine(output, addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), self.rom.data[addr:addr+size])), is_data=True)
                 addr += size
+
+    def formatLine(self, output, address, size, line, is_data=False):
+        bank = address >> 14
+        sub_address = address
+        if bank > 0:
+            sub_address = (address & 0x3FFF) | 0x4000
+        output.write("    %-50s ;; $%02x:$%04x" % (line, bank, sub_address))
+        if is_data:
+            output.write(" ")
+            for n in range(size):
+                output.write(dis.info.classifyData(address+n))
+        else:
+            for n in range(size):
+                output.write(" $%02x" % (dis.rom.data[address+n]))
+        output.write("\n")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("rom", type=str)
+    parser.add_argument("--rstJumpTable", type=str, default=None)
+    parser.add_argument("--instrumentation", action='append', default=[])
+    args = parser.parse_args()
+
+    dis = Disassembler(args.rom)
+    if args.rstJumpTable:
+        dis.rstJumpTable = int(args.rstJumpTable, 16)
+    for filename in args.instrumentation:
+        dis.loadInstrumentation(filename)
+
+    dis.parseFullRom()
+    dis.walkInstructionBlocks()
+
+    dis.info.updateSymbols()
+    dis.info.dumpStats()
+
+    dis.export("out")
