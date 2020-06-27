@@ -227,7 +227,7 @@ class Instrumentation:
                     last_symbol_addr = addr
         self.rom_symbols = {addr: symbol.format(addr, self.rom[addr]) if isinstance(symbol, AutoSymbol) else symbol for addr, symbol in self.rom_symbols.items() if not self.hasMark(addr, self.MARK_INSTR | self.MARK_DATA)}
 
-    def load(self, filename):
+    def loadInstrumentation(self, filename):
         f = open(filename, "rb")
         while True:
             data = f.read(16)
@@ -236,6 +236,33 @@ class Instrumentation:
             source, used_as = struct.unpack("<QQ", data)
             if (source & self.ID_MASK) == self.ID_ROM:
                 self.rom[source & 0xFFFFFFFF] = used_as
+
+    def loadSymbolFile(self, filename):
+        for line in open(filename, "rt"):
+            line = line.strip()
+            if line.startswith(";"):
+                continue
+            addr, symbol = line.split(" ", 1)
+            bank, addr = addr.split(":", 1)
+            bank, addr, symbol = int(bank, 16), int(addr, 16), symbol.strip()
+            if addr < 0x4000:
+                assert bank == 0
+                self.rom_symbols[addr] = symbol
+            elif addr < 0x8000:
+                self.rom_symbols[(addr & 0x3FFF) | (bank << 14)] = symbol
+            elif addr < 0xA000:
+                pass  # TODO VRAM
+            elif addr < 0xC000:
+                pass  # TODO SRAM
+            elif addr < 0xD000:
+                assert bank == 0
+                self.ram_symbols[addr] = symbol
+            elif addr < 0xE000:
+                self.ram_symbols[addr] = symbol
+            elif addr < 0xFF80:
+                pass  # IO regs, mirror, oam
+            elif addr < 0xFFFF:
+                self.ram_symbols[addr] = symbol
 
     def formatParameter(self, base_address, parameter, *, pc_target=False):
         if isinstance(parameter, Ref):

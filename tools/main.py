@@ -84,7 +84,10 @@ class Disassembler:
         self.rstJumpTable = None
 
     def loadInstrumentation(self, filename):
-        self.info.load(filename)
+        self.info.loadInstrumentation(filename)
+
+    def loadSymbolFile(self, filename):
+        self.info.loadSymbolFile(filename)
 
     def parseFullRom(self):
         for addr in range(len(self.rom.data)):
@@ -163,15 +166,17 @@ class Disassembler:
             addr += instr.size
 
     def export(self, path):
-        os.makedirs(path, exist_ok=True)
-        main = open(os.path.join(path, "main.asm"), "wt")
-        main.write("include \"regs.asm\"\n")
-        main.write("include \"memory.asm\"\n")
-        main.write("include \"macros.asm\"\n")
+        os.makedirs(os.path.join(path, "src"), exist_ok=True)
+        os.makedirs(os.path.join(path, "constants"), exist_ok=True)
+        os.makedirs(os.path.join(path, "gfx"), exist_ok=True)
+        main = open(os.path.join(path, "src", "main.asm"), "wt")
+        main.write("include \"constants/regs.asm\"\n")
+        main.write("include \"constants/memory.asm\"\n")
+        main.write("include \"src/macros.asm\"\n")
 
-        self.info.outputRegs(open(os.path.join(path, "regs.asm"), "wt"))
-        self.info.outputRam(open(os.path.join(path, "memory.asm"), "wt"))
-        open(os.path.join(path, "macros.asm"), "wt").write("""
+        self.info.outputRegs(open(os.path.join(path, "constants", "regs.asm"), "wt"))
+        self.info.outputRam(open(os.path.join(path, "constants", "memory.asm"), "wt"))
+        open(os.path.join(path, "src", "macros.asm"), "wt").write("""
 ld_long_load: MACRO
     db $FA
     dw \\1
@@ -181,13 +186,24 @@ ld_long_store: MACRO
     dw \\1
 ENDM
 """)
+        open(os.path.join(path, "Makefile"), "wt").write("""
+ASM_FILES = $(shell find -type f -name '*.asm')
+
+rom.gb: src/main.o
+\trgblink -n $@.sym -m $@.map -o $@ $^
+\trgbfix --validate $@
+
+src/main.o: $(ASM_FILES)
+\trgbasm --export-all -o $@ src/main.asm
+""")
+
         for bank in range(len(self.rom.data) // 0x4000):
             if bank == 0:
                 main.write("\nSECTION \"bank00\", ROM0[$0000]\n")
             else:
                 main.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
-            main.write("include \"bank%02x.asm\"\n" % (bank))
-            self._writeBank(bank, open(os.path.join(path, "bank%02x.asm" % (bank)), "wt"))
+            main.write("include \"src/bank%02x.asm\"\n" % (bank))
+            self._writeBank(bank, open(os.path.join(path, "src", "bank%02x.asm" % (bank)), "wt"))
 
     def _writeBank(self, bank, output):
         addr = 0x4000 * bank
@@ -241,6 +257,7 @@ if __name__ == "__main__":
     parser.add_argument("rom", type=str)
     parser.add_argument("--rstJumpTable", type=str, default=None)
     parser.add_argument("--instrumentation", action='append', default=[])
+    parser.add_argument("--sym")
     args = parser.parse_args()
 
     dis = Disassembler(args.rom)
@@ -248,6 +265,8 @@ if __name__ == "__main__":
         dis.rstJumpTable = int(args.rstJumpTable, 16)
     for filename in args.instrumentation:
         dis.loadInstrumentation(filename)
+    if args.sym:
+        dis.loadSymbolFile(args.sym)
 
     dis.parseFullRom()
     dis.walkInstructionBlocks()
