@@ -407,7 +407,7 @@ class Instruction:
         if op == 0xEF: self.__set(RST, 0x0028)
         if op == 0xFF: self.__set(RST, 0x0038)
 
-        assert self.type is not None, "Decode failed for: %04X:%02X" % (address, op)
+        assert self.type is not None, "Decode failed for: %02x:%04x:%02x" % (address >> 14, address, op)
 
     def __decodeCB(self, op):
         if (op & 0x07) == 0: self.p0 = B
@@ -490,6 +490,7 @@ class Instruction:
     def format(self, info):
         p0, p1 = self.p0, self.p1
 
+        # Prevent the assembler from optimizing "LD [FFxx], A" and "LD A, [FFxx]" instructions.
         if self.type == LD and isinstance(self.p0, Ref) and isinstance(self.p0.target, Word) and self.p0.target.value >= 0xFF00 and self.p1 == A:
             return "ld_long_store %s" % (info.formatParameter(self.address, p0.target))
         if self.type == LD and isinstance(self.p1, Ref) and isinstance(self.p1.target, Word) and self.p1.target.value >= 0xFF00 and self.p0 == A:

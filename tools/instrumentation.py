@@ -1,5 +1,6 @@
 import struct
 from instruction import Ref, Word
+import re
 
 
 class AutoSymbol:
@@ -20,7 +21,7 @@ class AutoSymbol:
     def isGlobal(self):
         return self.source_min is None
 
-    def format(self, addr, flags):
+    def format(self, addr, flags, *, scope=None):
         bank = addr >> 14
         addr &= 0x3FFF
         if bank > 0:
@@ -31,7 +32,7 @@ class AutoSymbol:
         if flags & Instrumentation.MARK_DATA:
             type_name = "data"
         if self.source_min is not None:
-            return ".%s_%04x" % (type_name, addr)
+            return "%s.%s_%04x" % (scope, type_name, addr)
         return "%s_%03x_%04x" % (type_name, bank, addr)
 
     def __repr__(self):
@@ -134,6 +135,7 @@ class Instrumentation:
             0xff70: "rSVBK",
             0xffff: "rIE",
         }
+        self.annotations = {}
 
     def mark(self, address, mark):
         self.rom[address] |= mark
@@ -143,6 +145,22 @@ class Instrumentation:
 
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
+
+    def markAsCodePointer(self, rom, address):
+        target = struct.unpack("<H", rom.data[address:address+2])[0]
+
+        if 0x4000 <= target < 0x8000:
+            if address < 0x4000:
+                return None
+            target = (target & 0x3FFF) | (address & 0xFFFFC000)
+        elif target >= 0x8000:
+            return None
+
+        self.mark(address, self.MARK_DATA | self.MARK_PTR_LOW)
+        self.mark(address + 1, self.MARK_DATA | self.MARK_PTR_HIGH)
+        self.mark(target, self.MARK_INSTR)
+        self.addAbsoluteRomSymbol(target)
+        return target
 
     def getActiveBank(self, addr):
         bank = (self.rom[addr] & self.MARK_BANK_MASK) >> self.MARK_BANK_SHIFT
@@ -189,10 +207,13 @@ class Instrumentation:
 
     def addRelativeSymbol(self, address, source_address):
         if address < 0x1000:
-            return
-        if address >= 0xC000 and address < 0xE000:
+            if source_address >= 0x4000:
+                return
+            if abs(address - source_address) > 0x100:
+                return
+        if 0xC000 <= address < 0xE000:
             self.addRamSymbol(address)
-        if address >= 0xFF80 and address < 0xFFFF:
+        if 0xFF80 <= address < 0xFFFF:
             self.addRamSymbol(address)
         if address >= 0x8000:
             return
@@ -225,7 +246,20 @@ class Instrumentation:
                         last_symbol_addr = addr
                 elif not symbol.startswith("."):
                     last_symbol_addr = addr
-        self.rom_symbols = {addr: symbol.format(addr, self.rom[addr]) if isinstance(symbol, AutoSymbol) else symbol for addr, symbol in self.rom_symbols.items() if not self.hasMark(addr, self.MARK_INSTR | self.MARK_DATA)}
+
+        new_symbols = {}
+        scope = None
+        for addr, symbol in sorted(self.rom_symbols.items()):
+            if not self.hasMark(addr, self.MARK_INSTR | self.MARK_DATA):
+                if isinstance(symbol, AutoSymbol):
+                    new_symbols[addr] = symbol.format(addr, self.rom[addr], scope=scope)
+                else:
+                    new_symbols[addr] = symbol
+                if "." not in new_symbols[addr]:
+                    scope = new_symbols[addr]
+            else:
+                print("drop %x" % (addr))
+        self.rom_symbols = new_symbols
 
     def loadInstrumentation(self, filename):
         f = open(filename, "rb")
@@ -264,28 +298,62 @@ class Instrumentation:
             elif addr < 0xFFFF:
                 self.ram_symbols[addr] = symbol
 
-    def formatParameter(self, base_address, parameter, *, pc_target=False):
+    def formatParameter(self, base_address, parameter, *, pc_target=False, is_word=False):
         if isinstance(parameter, Ref):
             return "[%s]" % (self.formatParameter(base_address, parameter.target, pc_target=pc_target))
         if isinstance(parameter, Word):
-            return self.formatParameter(base_address, parameter.value, pc_target=pc_target)
+            return self.formatParameter(base_address, parameter.value, pc_target=pc_target, is_word=True)
         if isinstance(parameter, int):
             if not pc_target and parameter in self.reg_symbols:
-                return self.reg_symbols[parameter]
+                return self.formatSymbol(self.reg_symbols[parameter])
             if parameter >= 0x8000 and parameter in self.ram_symbols:
-                return self.ram_symbols[parameter]
+                return self.formatSymbol(self.ram_symbols[parameter])
             if (parameter >= 0x1000 or pc_target) and parameter < 0x4000 and parameter in self.rom_symbols:
-                return self.rom_symbols[parameter]
-            if parameter >= 0x4000 and parameter < 0x8000 and base_address >= 0x4000:  # upper bank target
+                return self.formatSymbol(self.rom_symbols[parameter])
+            if 0x4000 <= parameter < 0x8000 and base_address >= 0x4000:  # upper bank target
                 addr = (parameter & 0x3FFF) | (base_address & 0xFFFFC000)
                 if addr in self.rom_symbols:
-                    return self.rom_symbols[addr]
+                    return self.formatSymbol(self.rom_symbols[addr])
+            if is_word:
+                return "$%04x" % (parameter)
             return "$%02x" % (parameter)
         return parameter
+
+    def formatSymbol(self, symbol):
+        if "." in symbol:
+            return symbol[symbol.find("."):]
+        return symbol
 
     def outputRegs(self, file):
         for value, name in sorted(self.reg_symbols.items()):
             file.write("%-14s EQU $%04x\n" % (name, value))
+
+    def loadAnnotations(self, source_file):
+        scope = None
+        collected_annotations = []
+        for line in open(source_file, "rt"):
+            label = None
+            m = re.match("include \"([^\"]+)\"", line)
+            if m:
+                self.loadAnnotations("out/" + m.group(1))
+
+            m = re.search(";@(.+)", line)
+            if m:
+                annotation = m.group(1).strip().split(":")
+                collected_annotations.append(annotation)
+
+            m = re.match("([a-zA-Z0-9_\\.]+):", line)
+            if m:
+                if m.group(1).startswith("."):
+                    label = scope + m.group(1)
+                else:
+                    scope = label = m.group(1)
+                if collected_annotations:
+                    self.annotations[label] = collected_annotations
+                collected_annotations = []
+
+        assert len(collected_annotations) == 0
+
 
     def outputRam(self, file):
         file.write("\nSECTION \"WRAM Bank0\", WRAM0[$c000]\n")

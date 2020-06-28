@@ -89,6 +89,9 @@ class Disassembler:
     def loadSymbolFile(self, filename):
         self.info.loadSymbolFile(filename)
 
+    def loadAnnotations(self, filename):
+        self.info.loadAnnotations(filename)
+
     def parseFullRom(self):
         for addr in range(len(self.rom.data)):
             if self.info.getMarks(addr, self.info.MARK_INSTR | self.info.MARK_DATA) == self.info.MARK_INSTR:
@@ -103,6 +106,28 @@ class Disassembler:
                     self.info.addAbsoluteRomSymbol((target & 0x3FFF) | (addr & 0xFFFFC000))
         for addr in range(0, len(self.rom.data), 0x4000):
             self.info.addAbsoluteRomSymbol(addr)
+
+    def processAnnotations(self):
+        symbol_mapping = {symbol: addr for addr, symbol in self.info.rom_symbols.items()}
+        for symbol, annotations in self.info.annotations.items():
+            addr = symbol_mapping[symbol]
+            for annotation in annotations:
+                if annotation[0].lower() == "jumptable":
+                    if len(annotation) > 1:
+                        for n in range(int(annotation[1])):
+                            target = self.info.markAsCodePointer(self.rom, addr)
+                            if target is not None:
+                                self.instr_addr_todo.append(target)
+                            addr += 2
+                    else:
+                        first = True
+                        while addr not in self.info.rom_symbols or first:
+                            first = False
+                            target = self.info.markAsCodePointer(self.rom, addr)
+                            if target is not None:
+                                self.instr_addr_todo.append(target)
+                            addr += 2
+                break
 
     def walkInstructionBlocks(self):
         while self.instr_addr_todo:
@@ -150,14 +175,9 @@ class Disassembler:
                 while True:
                     if info.hasMark(addr, info.MARK_INSTR):
                         break
-                    target = struct.unpack("<H", self.rom.data[addr:addr + 2])[0]
-                    if 0x4000 <= target < 0x8000:
-                        target = (target & 0x3FFF) | (addr & 0xFFFFC000)
-                    info.mark(addr, info.MARK_DATA | info.MARK_PTR_LOW)
-                    info.mark(addr + 1, info.MARK_DATA | info.MARK_PTR_HIGH)
-                    info.mark(target, info.MARK_INSTR)
-                    info.addAbsoluteRomSymbol(target)
-                    self.instr_addr_todo.append(target)
+                    target = info.markAsCodePointer(self.rom, addr)
+                    if target is not None:
+                        self.instr_addr_todo.append(target)
                     addr += 2
                 break
 
@@ -202,8 +222,8 @@ src/main.o: $(ASM_FILES)
                 main.write("\nSECTION \"bank00\", ROM0[$0000]\n")
             else:
                 main.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
-            main.write("include \"src/bank%02x.asm\"\n" % (bank))
-            self._writeBank(bank, open(os.path.join(path, "src", "bank%02x.asm" % (bank)), "wt"))
+            main.write("include \"src/bank%02X.asm\"\n" % (bank))
+            self._writeBank(bank, open(os.path.join(path, "src", "bank%02X.asm" % (bank)), "wt"))
 
     def _writeBank(self, bank, output):
         addr = 0x4000 * bank
@@ -212,9 +232,13 @@ src/main.o: $(ASM_FILES)
             end_of_bank -= 1
         while addr < end_of_bank:
             if addr in self.info.rom_symbols:
-                if not self.info.rom_symbols[addr].startswith("."):
+                symbol = self.info.rom_symbols[addr]
+                if "." not in symbol:
                     output.write("\n")
-                output.write("%s:\n" % (self.info.rom_symbols[addr]))
+                if symbol in self.info.annotations:
+                    for annotation in self.info.annotations[symbol]:
+                        output.write(";@%s\n" % (": ".join(annotation)))
+                output.write("%s:\n" % self.info.formatSymbol(symbol))
             if self.info.hasMark(addr, self.info.MARK_INSTR):
                 instr = Instruction(self.rom, addr)
                 self.formatLine(output, addr, instr.size, instr.format(self.info))
@@ -241,7 +265,7 @@ src/main.o: $(ASM_FILES)
         sub_address = address
         if bank > 0:
             sub_address = (address & 0x3FFF) | 0x4000
-        output.write("    %-50s ;; $%02x:$%04x" % (line, bank, sub_address))
+        output.write("    %-50s ;; %02x:%04x" % (line, bank, sub_address))
         if is_data:
             output.write(" ")
             for n in range(size):
@@ -258,6 +282,7 @@ if __name__ == "__main__":
     parser.add_argument("--rstJumpTable", type=str, default=None)
     parser.add_argument("--instrumentation", action='append', default=[])
     parser.add_argument("--sym")
+    parser.add_argument("--annotations")
     args = parser.parse_args()
 
     dis = Disassembler(args.rom)
@@ -267,8 +292,10 @@ if __name__ == "__main__":
         dis.loadInstrumentation(filename)
     if args.sym:
         dis.loadSymbolFile(args.sym)
-
+    if args.annotations:
+        dis.loadAnnotations(args.annotations)
     dis.parseFullRom()
+    dis.processAnnotations()
     dis.walkInstructionBlocks()
 
     dis.info.updateSymbols()
