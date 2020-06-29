@@ -95,12 +95,20 @@ void Audio::callback(float* stream, int length)
         wave.length = 0;
         if (NR34.value & 0x40)
             wave.length = 256 - NR31.value;
+        wave.volume = 0;
         NR34.value = 0;
     }
     if (NR44.value & 0x80)
     {
         noise.active = true;
-        noise.freq_div = (2048 - ((int(NR44.value & 0x07) << 8) | NR43.value)) / 2;
+        int freq_shift = NR43.value >> 4;
+        int freq_div = NR43.value & 0x07;
+        if (freq_div == 0)
+        {
+            freq_div = 1;
+            freq_shift -= 1;
+        }
+        noise.freq_div = freq_div << freq_shift;
         noise.length = 0;
         if (NR44.value & 0x40)
             noise.length = 64 - (NR41.value & 0x3F);
