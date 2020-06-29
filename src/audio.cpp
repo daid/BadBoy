@@ -62,7 +62,7 @@ void Audio::callback(float* stream, int length)
             square_1.length = 64 - (NR11.value & 0x3F);
         square_1.duty = (NR11.value >> 6);
         square_1.freq_sweep_shift = (NR10.value & 0x07);
-        square_1.freq_sweep_sub = (NR10.value & 0x08);
+        square_1.freq_sweep_inc = (NR10.value & 0x08);
         square_1.freq_sweep_delay = (NR10.value >> 4) & 0x07;
         if (square_1.freq_sweep_delay == 0)
             square_1.freq_sweep_delay = 8;
@@ -153,10 +153,12 @@ void Audio::SoundChannel::callback(float* stream, int stream_length)
         {
             freq_sweep_counter = 0;
             int diff = freq_div >> freq_sweep_shift;
-            if (freq_sweep_sub)
-                freq_div -= diff;
-            else
+            if (freq_sweep_inc)
                 freq_div += diff;
+            else
+                freq_div -= diff;
+            if (freq_div > 1024)
+                freq_div = 1024;
         }
     }
     if (state == 3 && volume_sweep_delay)

@@ -27,7 +27,7 @@ public:
         int length = 0;
         int duty = 0;
         int freq_sweep_shift = 0;
-        bool freq_sweep_sub = false;
+        bool freq_sweep_inc = false;
         int freq_sweep_delay = 0;
         int volume = 0;
         bool volume_sweep_inc = false;
