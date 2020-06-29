@@ -8,6 +8,7 @@
 #include "opcodes.h"
 #include "cpu.h"
 #include "video.h"
+#include "audio.h"
 #include "input.h"
 #include "timer.h"
 #include "mm.h"
@@ -43,6 +44,8 @@ static void initCore()
         mm::get(0xFF50).set(0x01);
         cpu.pc = 0x100;
     }
+
+    audio.init();
 }
 
 void coreLoop()

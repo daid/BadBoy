@@ -139,6 +139,15 @@ bool Video::update()
                     line_ptr[x] |= 0x04 << 24;
             }
         }
+        if (!(video.LCDC.value & 0x01))
+        {
+            if (cpu.gbc)
+                for(int x=0; x<160; x++)
+                    line_ptr[x] &= 0xffffff;
+            else
+                for(int x=0; x<160; x++)
+                    line_ptr[x] = 0xffffff;
+        }
         if (video.LCDC.value & 0x02)
         {
             int sprite_size = 8;
