@@ -64,9 +64,13 @@ void Audio::callback(float* stream, int length)
         square_1.freq_sweep_shift = (NR10.value & 0x07);
         square_1.freq_sweep_sub = (NR10.value & 0x08);
         square_1.freq_sweep_delay = (NR10.value >> 4) & 0x07;
+        if (square_1.freq_sweep_delay == 0)
+            square_1.freq_sweep_delay = 8;
         square_1.volume = (NR12.value >> 4);
         square_1.volume_sweep_inc = (NR12.value & 0x08);
         square_1.volume_sweep_delay = (NR12.value & 0x07);
+        if (square_1.volume_sweep_delay == 0)
+            square_1.volume_sweep_delay = 8;
         NR14.value = 0;
     }
     if (NR24.value & 0x80)
@@ -80,12 +84,15 @@ void Audio::callback(float* stream, int length)
         square_2.volume = (NR22.value >> 4);
         square_2.volume_sweep_inc = (NR22.value & 0x08);
         square_2.volume_sweep_delay = (NR22.value & 0x07);
+        if (square_2.volume_sweep_delay == 0)
+            square_2.volume_sweep_delay = 8;
         NR24.value = 0;
     }
     if (NR34.value & 0x80)
     {
         wave.active = true;
         wave.freq_div = (2048 - ((int(NR34.value & 0x07) << 8) | NR33.value));
+        wave.length = 0;
         if (NR34.value & 0x40)
             wave.length = 256 - NR31.value;
         NR34.value = 0;
@@ -100,6 +107,8 @@ void Audio::callback(float* stream, int length)
         noise.volume = (NR42.value >> 4);
         noise.volume_sweep_inc = (NR42.value & 0x08);
         noise.volume_sweep_delay = (NR42.value & 0x07);
+        if (noise.volume_sweep_delay == 0)
+            noise.volume_sweep_delay = 8;
         NR44.value = 0;
     }
     square_1.callback(stream, length);
@@ -129,7 +138,7 @@ void Audio::SoundChannel::callback(float* stream, int stream_length)
         if (!length)
             active = false;
     }
-    if ((state & 1) && freq_sweep_delay)
+    if ((state & 1) && freq_sweep_delay && freq_sweep_shift)
     {
         freq_sweep_counter += 1;
         if (freq_sweep_counter >= freq_sweep_delay)
