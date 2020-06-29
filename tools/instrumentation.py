@@ -171,13 +171,37 @@ class Instrumentation:
     def classifyData(self, addr):
         mark = self.rom[addr]
         if not (mark & self.MARK_DATA):
+            return None
+        id = mark & self.ID_MASK
+        if id == self.ID_VRAM:
+            if (mark & 0x3FFF) < 0x1800:
+                return "GFX"
+            return "BackgroundTile"
+        elif id == self.ID_OAM:
+            if (mark & 0x03) == 0x00:
+                return "Sprite X"
+            if (mark & 0x03) == 0x01:
+                return "Sprite Y"
+            if (mark & 0x03) == 0x02:
+                return "Sprite Tile"
+            return "Sprite Attribute"
+        elif id == self.ID_IO:
+            return self.reg_symbols.get(mark & 0xFFFF, "Reg[%04x]" % (mark & 0xFFFF))
+        elif id == self.ID_ROM:
+            if (mark & 0xF000) == 0x2000:
+                return "Bank"
+        return None
+
+    def classifyDataAsChar(self, addr):
+        mark = self.rom[addr]
+        if not (mark & self.MARK_DATA):
             return "?"
-        id = self.rom[addr] & self.ID_MASK
+        id = mark & self.ID_MASK
         if id == self.ID_VRAM:
             if (mark & 0x3FFF) < 0x1800:
                 return "S"
             return "V"
-        if id == self.ID_OAM:
+        elif id == self.ID_OAM:
             if (mark & 0x03) == 0x00:
                 return "Y"
             if (mark & 0x03) == 0x01:
@@ -185,6 +209,8 @@ class Instrumentation:
             if (mark & 0x03) == 0x02:
                 return "T"
             return "A"
+        elif id == self.ID_IO:
+            return "R"
         return "."
 
     def addRamSymbol(self, address):
@@ -279,6 +305,10 @@ class Instrumentation:
             addr, symbol = line.split(" ", 1)
             bank, addr = addr.split(":", 1)
             bank, addr, symbol = int(bank, 16), int(addr, 16), symbol.strip()
+            if re.match(r"(unknown|code|data)_[0-9a-fA-F]{3}_[0-9a-fA-F]{4}$", symbol):
+                continue
+            if re.match(r"(unknown|code|data)_[0-9a-fA-F]{3}_[0-9a-fA-F]{4}\.(unknown|code|data)_[0-9a-fA-F]{4}$", symbol):
+                continue
             if addr < 0x4000:
                 assert bank == 0
                 self.rom_symbols[addr] = symbol
@@ -329,28 +359,23 @@ class Instrumentation:
             file.write("%-14s EQU $%04x\n" % (name, value))
 
     def loadAnnotations(self, source_file):
-        scope = None
         collected_annotations = []
         for line in open(source_file, "rt"):
-            label = None
             m = re.match("include \"([^\"]+)\"", line)
             if m:
                 self.loadAnnotations("out/" + m.group(1))
 
-            m = re.search(";@(.+)", line)
+            m = re.search(r";@(.+)", line)
             if m:
-                annotation = m.group(1).strip().split(":")
+                annotation = [s.strip() for s in m.group(1).strip().split(":")]
                 collected_annotations.append(annotation)
 
-            m = re.match("([a-zA-Z0-9_\\.]+):", line)
+            m = re.search(r";; ([0-9A-Fa-f]{2}):([0-9A-Fa-f]{4})", line)
             if m:
-                if m.group(1).startswith("."):
-                    label = scope + m.group(1)
-                else:
-                    scope = label = m.group(1)
+                addr = (int(m.group(2), 16) & 0x3fff) | (int(m.group(1), 16) << 14)
                 if collected_annotations:
-                    self.annotations[label] = collected_annotations
-                collected_annotations = []
+                    self.annotations[addr] = collected_annotations
+                    collected_annotations = []
 
         assert len(collected_annotations) == 0
 

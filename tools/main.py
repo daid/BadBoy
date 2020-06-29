@@ -17,7 +17,6 @@ def exportAllAsGraphics(rom):
         for tile_y in range(64):
             for tile_x in range(16):
                 idx = bank * 0x4000 + tile_y * 16 * 16 + tile_x * 16
-                print(hex(idx))
                 for y in range(8):
                     a = rom.data[idx + y * 2]
                     b = rom.data[idx + y * 2 + 1]
@@ -108,9 +107,7 @@ class Disassembler:
             self.info.addAbsoluteRomSymbol(addr)
 
     def processAnnotations(self):
-        symbol_mapping = {symbol: addr for addr, symbol in self.info.rom_symbols.items()}
-        for symbol, annotations in self.info.annotations.items():
-            addr = symbol_mapping[symbol]
+        for addr, annotations in self.info.annotations.items():
             for annotation in annotations:
                 if annotation[0].lower() == "jumptable":
                     if len(annotation) > 1:
@@ -127,7 +124,14 @@ class Disassembler:
                             if target is not None:
                                 self.instr_addr_todo.append(target)
                             addr += 2
-                break
+                elif annotation[0].lower() == "gfx":
+                    first = True
+                    while addr not in self.info.rom_symbols or first:
+                        first = False
+                        self.info.rom[addr] = self.info.MARK_DATA | self.info.ID_VRAM
+                        addr += 1
+                else:
+                    print("Unknown annotation:", annotation)
 
     def walkInstructionBlocks(self):
         while self.instr_addr_todo:
@@ -231,13 +235,13 @@ src/main.o: $(ASM_FILES)
         while end_of_bank > addr and self.rom.data[end_of_bank-1] == 0x00:
             end_of_bank -= 1
         while addr < end_of_bank:
+            if addr in self.info.rom_symbols and "." not in self.info.rom_symbols[addr]:
+                output.write("\n")
+            if addr in self.info.annotations:
+                for annotation in self.info.annotations[addr]:
+                    output.write(";@%s\n" % (": ".join(annotation)))
             if addr in self.info.rom_symbols:
                 symbol = self.info.rom_symbols[addr]
-                if "." not in symbol:
-                    output.write("\n")
-                if symbol in self.info.annotations:
-                    for annotation in self.info.annotations[symbol]:
-                        output.write(";@%s\n" % (": ".join(annotation)))
                 output.write("%s:\n" % self.info.formatSymbol(symbol))
             if self.info.hasMark(addr, self.info.MARK_INSTR):
                 instr = Instruction(self.rom, addr)
@@ -255,7 +259,7 @@ src/main.o: $(ASM_FILES)
                 if self.info.hasMark(addr - 1, self.info.MARK_INSTR) and not any(self.rom.data[addr:addr+size]):
                     while addr + size < end_of_bank and not (self.info.hasMark(addr + size, self.info.MARK_INSTR) or self.info.hasMark(addr + size, self.info.MARK_PTR_LOW)) and self.rom.data[addr+size] == 0 and addr + size not in self.info.rom_symbols:
                         size += 1
-                    self.formatLine(output, addr, 0, "ds   %d" % (size))
+                    self.formatLine(output, addr, size, "ds   %d" % (size), is_data=True)
                 else:
                     self.formatLine(output, addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), self.rom.data[addr:addr+size])), is_data=True)
                 addr += size
@@ -269,10 +273,14 @@ src/main.o: $(ASM_FILES)
         if is_data:
             output.write(" ")
             for n in range(size):
-                output.write(dis.info.classifyData(address+n))
+                output.write(self.info.classifyDataAsChar(address+n))
         else:
             for n in range(size):
-                output.write(" $%02x" % (dis.rom.data[address+n]))
+                output.write(" $%02x" % (self.rom.data[address+n]))
+            for n in range(size):
+                s = self.info.classifyData(address+n)
+                if s:
+                    output.write(" %s" % (s))
         output.write("\n")
 
 
