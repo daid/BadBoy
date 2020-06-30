@@ -11,7 +11,7 @@ public:
     ~LockAudio() { SDL_UnlockAudioDevice(audio_device); }
 };
 
-static void audioCallback(void*  userdata, Uint8* raw_stream, int raw_length)
+static void audioCallback(void* userdata, Uint8* raw_stream, int raw_length)
 {
     SDL_memset(raw_stream, 0, raw_length);
 
@@ -20,19 +20,24 @@ static void audioCallback(void*  userdata, Uint8* raw_stream, int raw_length)
     while(length > 0)
     {
         //Call the callback at 256Hz, as "events" happen at 256, 128 and 64Hz
-        audio.callback(stream, 256);
-        stream += 256;
-        length -= 256;
+        audio.callback(stream, 512);
+        stream += 512;
+        length -= 512;
     }
 
     stream = reinterpret_cast<float*>(raw_stream);
     length = raw_length / sizeof(float);
-    static float high_pass = 0.0f;
-    for(int n=0; n<length; n++)
+    static float left_high_pass = 0.0f;
+    static float right_high_pass = 0.0f;
+    for(int n=0; n<length; n+=2)
     {
-        float new_value = stream[n] - high_pass;
-        high_pass = (stream[n] - new_value) * 0.997315;
+        float new_value = stream[n] - left_high_pass;
+        left_high_pass = (stream[n] - new_value) * 0.997315;
         stream[n] = new_value;
+
+        new_value = stream[n+1] - right_high_pass;
+        right_high_pass = (stream[n+1] - new_value) * 0.997315;
+        stream[n+1] = new_value;
     }
 }
 
@@ -43,7 +48,7 @@ void Audio::init()
     SDL_zero(spec);
     spec.freq = 65536;
     spec.format = AUDIO_F32;
-    spec.channels = 1;
+    spec.channels = 2;
     spec.samples = 2048;
     spec.callback = audioCallback;
 
@@ -61,11 +66,15 @@ void Audio::callback(float* stream, int length)
         noise.active = false;
         return;
     }
+    float left_volume = float((NR50.value >> 4) & 0x07) / float(0x07);
+    float right_volume = float(NR50.value & 0x07) / float(0x07);
 
-    square_1.callback(stream, length);
-    square_2.callback(stream, length);
-    wave.callback(stream, length);
-    noise.callback(stream, length);
+    uint8_t cm = NR51.value;
+
+    square_1.callback(stream, length, (cm & 0x10) ? left_volume : 0.0, (cm & 0x01) ? right_volume : 0.0);
+    square_2.callback(stream, length, (cm & 0x20) ? left_volume : 0.0, (cm & 0x02) ? right_volume : 0.0);
+    wave.callback(stream, length, (cm & 0x40) ? left_volume : 0.0, (cm & 0x04) ? right_volume : 0.0);
+    noise.callback(stream, length, (cm & 0x80) ? left_volume : 0.0, (cm & 0x08) ? right_volume : 0.0);
 }
 
 void Audio::SoundChannel::update()
@@ -85,17 +94,18 @@ void Audio::SoundChannel::update()
     }
 }
 
-void Audio::SquareWaveSoundChannel::callback(float* stream, int stream_length)
+void Audio::SquareWaveSoundChannel::callback(float* stream, int stream_length, float left_volume, float right_volume)
 {
     if (!active)
         return;
 
     float s = 0.01 * volume.value;
     int freq_div = 2048 - frequency.div;
-    for(int n=0; n<stream_length; n++)
+    for(int n=0; n<stream_length; n+=2)
     {
         //TODO: duty cycle
-        stream[n] += wave_counter > freq_div / 2 ? -s : s;
+        stream[n] += (wave_counter > freq_div / 2 ? -s : s) * left_volume;
+        stream[n+1] += (wave_counter > freq_div / 2 ? -s : s) * right_volume;
         wave_counter += 2;
         if (wave_counter >= freq_div) wave_counter = 0;
     }
@@ -103,7 +113,7 @@ void Audio::SquareWaveSoundChannel::callback(float* stream, int stream_length)
     update();
 }
 
-void Audio::WaveSoundChannel::callback(float* stream, int stream_length)
+void Audio::WaveSoundChannel::callback(float* stream, int stream_length, float left_volume, float right_volume)
 {
     if (!active)
         return;
@@ -113,14 +123,15 @@ void Audio::WaveSoundChannel::callback(float* stream, int stream_length)
     if (volume_shift > -1)
     {
         int freq_div = 2048 - frequency.div;
-        for(int n=0; n<stream_length; n++)
+        for(int n=0; n<stream_length; n+=2)
         {
             int sample = audio.WAVE[wave_counter / 2].value;
             if (wave_counter & 1)
                 sample &= 0x0F;
             else
                 sample >>= 4;
-            stream[n] += 0.01 * (sample >> volume_shift);
+            stream[n] += 0.01 * (sample >> volume_shift) * left_volume;
+            stream[n+1] += 0.01 * (sample >> volume_shift) * right_volume;
             counter += 32;
             if (counter >= freq_div)
             {
@@ -133,7 +144,7 @@ void Audio::WaveSoundChannel::callback(float* stream, int stream_length)
     update();
 }
 
-void Audio::NoiseSoundChannel::callback(float* stream, int stream_length)
+void Audio::NoiseSoundChannel::callback(float* stream, int stream_length, float left_volume, float right_volume)
 {
     if (!active)
         return;
@@ -143,9 +154,10 @@ void Audio::NoiseSoundChannel::callback(float* stream, int stream_length)
     int freq_div = (conf & 0x07) * 16;
     if (!freq_div) freq_div = 8;
     freq_div <<= (conf >> 4);
-    for(int n=0; n<stream_length; n++)
+    for(int n=0; n<stream_length; n+=2)
     {
-        stream[n] += (lfsr & 0x01) ? -s : s;
+        stream[n] += ((lfsr & 0x01) ? -s : s) * left_volume;
+        stream[n+1] += ((lfsr & 0x01) ? -s : s) * right_volume;
         wave_counter += 64;
         while(wave_counter >= freq_div)
         {

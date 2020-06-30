@@ -225,10 +225,24 @@ bool Video::update()
             last_tick = tick;
             frame_skip_counter = input.fast_forward;
         }else{
-            if (tick - last_tick < (1000 / 60))
-                SDL_Delay((1000 / 60) - (tick - last_tick));
-            last_tick += 10;
+            const uint32_t tick_step = 17;
+            if (tick - last_tick < tick_step)
+                SDL_Delay(tick_step - (tick - last_tick));
+            last_tick += tick_step;
         }
+
+        /*
+        static int frame_count = 0;
+        frame_count += 1;
+        if (frame_count == 100)
+        {
+            static uint32_t fps_tick;
+            float fps = float(frame_count) / float(SDL_GetTicks() - fps_tick) * 1000.0f;
+            printf("%f\n", fps);
+            fps_tick = SDL_GetTicks();
+            frame_count = 0;
+        }
+        */
     }
     return true;
 }

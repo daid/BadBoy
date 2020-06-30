@@ -115,19 +115,19 @@ public:
     class SquareWaveSoundChannel : public SoundChannel
     {
     public:
-        void callback(float* stream, int length);
+        void callback(float* stream, int length, float left_volume, float right_volume);
     };
     class WaveSoundChannel : public SoundChannel
     {
     public:
-        void callback(float* stream, int length);
+        void callback(float* stream, int length, float left_volume, float right_volume);
     private:
         int counter = 0;
     };
     class NoiseSoundChannel : public SoundChannel
     {
     public:
-        void callback(float* stream, int length);
+        void callback(float* stream, int length, float left_volume, float right_volume);
     private:
         uint32_t lfsr = 0xFFFF;
     };
