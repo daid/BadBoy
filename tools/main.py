@@ -243,26 +243,55 @@ src/main.o: $(ASM_FILES)
             if addr in self.info.rom_symbols:
                 symbol = self.info.rom_symbols[addr]
                 output.write("%s:\n" % self.info.formatSymbol(symbol))
-            if self.info.hasMark(addr, self.info.MARK_INSTR):
-                instr = Instruction(self.rom, addr)
-                self.formatLine(output, addr, instr.size, instr.format(self.info))
-                addr += instr.size
-            elif self.info.hasMark(addr, self.info.MARK_PTR_LOW) and self.info.hasMark(addr + 1, self.info.MARK_PTR_HIGH):
-                pointer = self.rom.data[addr] | (self.rom.data[addr+1] << 8)
-                size = 2
-                self.formatLine(output, addr, size, "dw   %s" % self.info.formatParameter(addr, pointer))
-                addr += size
-            else:
-                size = 1
-                while size < 8 and addr + size < end_of_bank and addr + size not in self.info.rom_symbols and not (self.info.hasMark(addr + size, self.info.MARK_INSTR) or self.info.hasMark(addr + size, self.info.MARK_PTR_LOW)):
-                    size += 1
-                if self.info.hasMark(addr - 1, self.info.MARK_INSTR) and not any(self.rom.data[addr:addr+size]):
-                    while addr + size < end_of_bank and not (self.info.hasMark(addr + size, self.info.MARK_INSTR) or self.info.hasMark(addr + size, self.info.MARK_PTR_LOW)) and self.rom.data[addr+size] == 0 and addr + size not in self.info.rom_symbols:
-                        size += 1
-                    self.formatLine(output, addr, size, "ds   %d" % (size), is_data=True)
-                else:
-                    self.formatLine(output, addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), self.rom.data[addr:addr+size])), is_data=True)
-                addr += size
+
+            formatter = self.getFormatter(addr)
+            addr = formatter(output, addr)
+
+    def getFormatter(self, addr):
+        if self.info.hasMark(addr, self.info.MARK_INSTR):
+            return self.__formatInstruction
+        elif self.info.hasMark(addr, self.info.MARK_PTR_LOW) and self.info.hasMark(addr + 1, self.info.MARK_PTR_HIGH):
+            return self.__formatPointer
+        elif self.info.classifyDataAsChar(addr) == "G" and self.info.classifyDataAsChar(addr + 1) == "G":
+            return self.__formatGraphics
+        return self.__formatRawData
+
+    def __formatInstruction(self, output, addr):
+        instr = Instruction(self.rom, addr)
+        self.formatLine(output, addr, instr.size, instr.format(self.info))
+        return addr + instr.size
+
+    def __formatPointer(self, output, addr):
+        pointer = struct.unpack("<H", self.rom.data[addr:addr + 2])[0]
+        self.formatLine(output, addr, 2, "dw   %s" % self.info.formatParameter(addr, pointer))
+        return addr + 2
+
+    def __formatGraphics(self, output, addr):
+        a = self.rom.data[addr+0]
+        b = self.rom.data[addr+1]
+        gfx = ""
+        for n in range(8):
+            p = 0
+            if a & (0x80 >> n):
+                p |= 1
+            if b & (0x80 >> n):
+                p |= 2
+            gfx += "%d" % p
+        self.formatLine(output, addr, 2, "dw   `%s" % gfx)
+        return addr + 2
+
+    def __formatRawData(self, output, addr):
+        size = 1
+        end_of_bank = (addr | 0x3FFF) + 1
+        while size < 8 and addr + size < end_of_bank and addr + size not in self.info.rom_symbols and self.getFormatter(addr + size) == self.__formatRawData:
+            size += 1
+        if self.info.hasMark(addr - 1, self.info.MARK_INSTR) and not any(self.rom.data[addr:addr + size]):
+            while addr + size < end_of_bank and self.getFormatter(addr + size) == self.__formatRawData and self.rom.data[addr + size] == 0 and addr + size not in self.info.rom_symbols:
+                size += 1
+            self.formatLine(output, addr, size, "ds   %d" % (size), is_data=True)
+        else:
+            self.formatLine(output, addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), self.rom.data[addr:addr + size])), is_data=True)
+        return addr + size
 
     def formatLine(self, output, address, size, line, is_data=False):
         bank = address >> 14

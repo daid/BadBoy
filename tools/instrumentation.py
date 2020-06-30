@@ -199,7 +199,7 @@ class Instrumentation:
         id = mark & self.ID_MASK
         if id == self.ID_VRAM:
             if (mark & 0x3FFF) < 0x1800:
-                return "S"
+                return "G"
             return "V"
         elif id == self.ID_OAM:
             if (mark & 0x03) == 0x00:
@@ -210,6 +210,10 @@ class Instrumentation:
                 return "T"
             return "A"
         elif id == self.ID_IO:
+            if 0xFF10 <= (mark & 0xFFFF) < 0xFF30:
+                return "S"
+            if 0xFF30 <= (mark & 0xFFFF) < 0xFF40:
+                return "W"
             return "R"
         return "."
 
