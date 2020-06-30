@@ -225,8 +225,8 @@ bool Video::update()
             last_tick = tick;
             frame_skip_counter = input.fast_forward;
         }else{
-            if (tick - last_tick < 10)
-                SDL_Delay(10 - (tick - last_tick));
+            if (tick - last_tick < (1000 / 60))
+                SDL_Delay((1000 / 60) - (tick - last_tick));
             last_tick += 10;
         }
     }

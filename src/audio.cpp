@@ -3,6 +3,13 @@
 
 
 Audio audio;
+static SDL_AudioDeviceID audio_device;
+class LockAudio
+{
+public:
+    LockAudio() { SDL_LockAudioDevice(audio_device); }
+    ~LockAudio() { SDL_UnlockAudioDevice(audio_device); }
+};
 
 static void audioCallback(void*  userdata, Uint8* raw_stream, int raw_length)
 {
@@ -40,8 +47,8 @@ void Audio::init()
     spec.samples = 2048;
     spec.callback = audioCallback;
 
-    SDL_AudioDeviceID dev = SDL_OpenAudioDevice(nullptr, 0, &spec, &obtained, 0);
-    SDL_PauseAudioDevice(dev, 0);
+    audio_device = SDL_OpenAudioDevice(nullptr, 0, &spec, &obtained, 0);
+    SDL_PauseAudioDevice(audio_device, 0);
 }
 
 void Audio::callback(float* stream, int length)
@@ -50,127 +57,220 @@ void Audio::callback(float* stream, int length)
     {
         square_1.active = false;
         square_2.active = false;
+        wave.active = false;
+        noise.active = false;
         return;
     }
 
-    if (NR14.value & 0x80)
-    {
-        square_1.active = true;
-        square_1.freq_div = (2048 - ((int(NR14.value & 0x07) << 8) | NR13.value)) / 2;
-        square_1.length = 0;
-        if (NR14.value & 0x40)
-            square_1.length = 64 - (NR11.value & 0x3F);
-        square_1.duty = (NR11.value >> 6);
-        square_1.freq_sweep_shift = (NR10.value & 0x07);
-        square_1.freq_sweep_inc = (NR10.value & 0x08);
-        square_1.freq_sweep_delay = (NR10.value >> 4) & 0x07;
-        if (square_1.freq_sweep_delay == 0)
-            square_1.freq_sweep_delay = 8;
-        square_1.volume = (NR12.value >> 4);
-        square_1.volume_sweep_inc = (NR12.value & 0x08);
-        square_1.volume_sweep_delay = (NR12.value & 0x07);
-        if (square_1.volume_sweep_delay == 0)
-            square_1.volume_sweep_delay = 8;
-        NR14.value = 0;
-    }
-    if (NR24.value & 0x80)
-    {
-        square_2.active = true;
-        square_2.freq_div = (2048 - ((int(NR24.value & 0x07) << 8) | NR23.value)) / 2;
-        square_2.length = 0;
-        if (NR24.value & 0x40)
-            square_2.length = 64 - (NR21.value & 0x3F);
-        square_2.duty = (NR21.value >> 6);
-        square_2.volume = (NR22.value >> 4);
-        square_2.volume_sweep_inc = (NR22.value & 0x08);
-        square_2.volume_sweep_delay = (NR22.value & 0x07);
-        if (square_2.volume_sweep_delay == 0)
-            square_2.volume_sweep_delay = 8;
-        NR24.value = 0;
-    }
-    if (NR34.value & 0x80)
-    {
-        wave.active = true;
-        wave.freq_div = (2048 - ((int(NR34.value & 0x07) << 8) | NR33.value));
-        wave.length = 0;
-        if (NR34.value & 0x40)
-            wave.length = 256 - NR31.value;
-        wave.volume = 0;
-        NR34.value = 0;
-    }
-    if (NR44.value & 0x80)
-    {
-        noise.active = true;
-        int freq_shift = NR43.value >> 4;
-        int freq_div = NR43.value & 0x07;
-        if (freq_div == 0)
-        {
-            freq_div = 1;
-            freq_shift -= 1;
-        }
-        noise.freq_div = freq_div << freq_shift;
-        noise.length = 0;
-        if (NR44.value & 0x40)
-            noise.length = 64 - (NR41.value & 0x3F);
-        noise.volume = (NR42.value >> 4);
-        noise.volume_sweep_inc = (NR42.value & 0x08);
-        noise.volume_sweep_delay = (NR42.value & 0x07);
-        if (noise.volume_sweep_delay == 0)
-            noise.volume_sweep_delay = 8;
-        NR44.value = 0;
-    }
     square_1.callback(stream, length);
     square_2.callback(stream, length);
     wave.callback(stream, length);
     noise.callback(stream, length);
 }
 
-void Audio::SoundChannel::callback(float* stream, int stream_length)
+void Audio::SoundChannel::update()
+{
+    state = (state + 1) % 4;
+    if (!length.update())
+        active = false;
+    if (state & 1)
+    {
+        if (!frequency.update())
+            active = false;
+    }
+    if (state == 3)
+    {
+        if (!volume.update())
+            active = false;
+    }
+}
+
+void Audio::SquareWaveSoundChannel::callback(float* stream, int stream_length)
 {
     if (!active)
         return;
 
-    float s = 0.01 * volume;
+    float s = 0.01 * volume.value;
+    int freq_div = 2048 - frequency.div;
     for(int n=0; n<stream_length; n++)
     {
         //TODO: duty cycle
         stream[n] += wave_counter > freq_div / 2 ? -s : s;
-        wave_counter += 1;
+        wave_counter += 2;
         if (wave_counter >= freq_div) wave_counter = 0;
     }
 
-    state = (state + 1) % 4;
-    if (length)
+    update();
+}
+
+void Audio::WaveSoundChannel::callback(float* stream, int stream_length)
+{
+    if (!active)
+        return;
+
+    update();
+}
+
+void Audio::NoiseSoundChannel::callback(float* stream, int stream_length)
+{
+    if (!active)
+        return;
+
+    float s = 0.01 * volume.value;
+    uint8_t conf = audio.NR43.value;
+    int freq_div = (conf & 0x07) * 16;
+    if (!freq_div) freq_div = 8;
+    freq_div <<= (conf >> 4);
+    for(int n=0; n<stream_length; n++)
     {
-        length -= 1;
-        if (!length)
-            active = false;
-    }
-    if ((state & 1) && freq_sweep_delay && freq_sweep_shift)
-    {
-        freq_sweep_counter += 1;
-        if (freq_sweep_counter >= freq_sweep_delay)
+        stream[n] += (lfsr & 0x01) ? -s : s;
+        wave_counter += 64;
+        while(wave_counter >= freq_div)
         {
-            freq_sweep_counter = 0;
-            int diff = freq_div >> freq_sweep_shift;
-            if (freq_sweep_inc)
-                freq_div += diff;
+            wave_counter -= freq_div;
+            uint32_t bit = (lfsr ^ (lfsr >> 1)) & 0x01;
+            lfsr = (lfsr >> 1) | (bit << 14);
+            if (conf & 0x08)
+                lfsr = (lfsr & 0x3FBF) | ((lfsr & 0x4000) >> 8);
+        }
+    }
+
+    update();
+}
+
+bool Audio::FrequencySweep::update()
+{
+    if (sweep_delay && sweep_shift)
+    {
+        sweep_counter += 1;
+        if (sweep_counter >= sweep_delay)
+        {
+            sweep_counter = 0;
+            int diff = div >> sweep_shift;
+            if (sweep_sub)
+                div -= diff;
             else
-                freq_div -= diff;
-            if (freq_div > 1024)
-                freq_div = 1024;
+                div += diff;
+            if (div > 2047)
+                return false;
         }
     }
-    if (state == 3 && volume_sweep_delay)
+    return true;
+}
+
+bool Audio::Length::update()
+{
+    if (!enabled)
+        return true;
+    if (counter)
+        counter -= 1;
+    return counter > 0;
+}
+
+bool Audio::VolumeEnvelope::update()
+{
+    if (sweep_delay)
     {
-        volume_sweep_counter += 1;
-        if (volume_sweep_counter >= volume_sweep_delay)
+        sweep_counter += 1;
+        if (sweep_counter >= sweep_delay)
         {
-            volume_sweep_counter = 0;
-            if (volume_sweep_inc && volume < 0x0F)
-                volume += 1;
-            if (!volume_sweep_inc && volume > 0x00)
-                volume -= 1;
+            sweep_counter = 0;
+            if (sweep_inc && value < 0x0F)
+                value += 1;
+            if (!sweep_inc && value > 0x00)
+                value -= 1;
         }
     }
+    return true;
+}
+
+uint8_t Audio::NR10Reg::get() const
+{
+    uint8_t result = (audio.square_1.frequency.sweep_delay << 4) & 0x7F;
+    if (audio.square_1.frequency.sweep_sub)
+        result |= 0x08;
+    result |= audio.square_1.frequency.sweep_shift;
+    return result;
+}
+
+void Audio::NR10Reg::setImpl(uint8_t value)
+{
+    LockAudio lock;
+    audio.square_1.frequency.sweep_shift = (value & 0x07);
+    audio.square_1.frequency.sweep_sub = (value & 0x08);
+    audio.square_1.frequency.sweep_delay = (value >> 4) & 0x07;
+}
+
+uint8_t Audio::NRx1Reg::get() const
+{
+    return 0x00; //TODO: duty cycle
+}
+
+void Audio::NRx1Reg::setImpl(uint8_t value)
+{
+    LockAudio lock;
+    length.counter = (mask + 1) - (value & mask);
+    //TODO: duty cycle
+}
+
+uint8_t Audio::NRx2Reg::get() const
+{
+    uint8_t result = env.value << 4;
+    if (env.sweep_inc)
+        result |= 0x08;
+    result |= (env.sweep_delay) & 0x07;
+    return result;
+}
+
+void Audio::NRx2Reg::setImpl(uint8_t value)
+{
+    LockAudio lock;
+    env.value = value >> 4;
+    env.sweep_inc = value & 0x08;
+    env.sweep_delay = value & 0x07;
+}
+
+uint8_t Audio::NRx3Reg::get() const
+{
+    return 0xFF;
+}
+
+void Audio::NRx3Reg::setImpl(uint8_t value)
+{
+    LockAudio lock;
+    div = (div & 0xFF00) | value;
+}
+
+uint8_t Audio::NRx4Reg::get() const
+{
+    uint8_t result = 0xBF;
+    if (length.enabled)
+        result |= 0x40;
+    return result;
+}
+
+void Audio::NRx4Reg::setImpl(uint8_t value)
+{
+    LockAudio lock;
+    if (value & 0x80)
+    {
+        active = true;
+        if (frequency_div)
+            *frequency_div = ((*frequency_div) & 0xFF) | ((value & 0x07) << 8);
+    }
+    length.enabled = value & 0x40;
+}
+
+uint8_t Audio::NR52Reg::get() const
+{
+    uint8_t result = value;
+    if (audio.square_1.active)
+        result |= 0x01;
+    if (audio.square_2.active)
+        result |= 0x02;
+    if (audio.wave.active)
+        result |= 0x04;
+    if (audio.noise.active)
+        result |= 0x08;
+    return result;
 }

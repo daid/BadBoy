@@ -9,60 +9,149 @@ public:
     void init();
     void callback(float* stream, int length);
 
+    class FrequencySweep
+    {
+    public:
+        int div = 0;
+
+        int sweep_shift = 0;
+        bool sweep_sub = false;
+        int sweep_delay = 0;
+
+        int sweep_counter = 0;
+
+        bool update();
+    };
+    class Length
+    {
+    public:
+        bool enabled = false;
+        int counter = 0;
+
+        bool update();
+    };
+    class VolumeEnvelope
+    {
+    public:
+        int value = 0;
+        bool sweep_inc = false;
+        int sweep_delay = 0;
+        int sweep_counter = 0;
+
+        bool update();
+    };
+
+    class NR10Reg : public Mem8
+    {
+    public:
+        uint8_t get() const override;
+        void setImpl(uint8_t value) override;
+    };
+    class NRx1Reg : public Mem8
+    {
+    public:
+        NRx1Reg(Length& length, uint8_t mask) : length(length), mask(mask) {}
+        uint8_t get() const override;
+        void setImpl(uint8_t value) override;
+    private:
+        Length& length;
+        uint8_t mask;
+    };
+    class NRx2Reg : public Mem8
+    {
+    public:
+        NRx2Reg(VolumeEnvelope& env) : env(env) {}
+        uint8_t get() const override;
+        void setImpl(uint8_t value) override;
+
+    private:
+        VolumeEnvelope& env;
+    };
+    class NRx3Reg : public Mem8
+    {
+    public:
+        NRx3Reg(int& div) : div(div) {}
+        uint8_t get() const override;
+        void setImpl(uint8_t value) override;
+    private:
+        int& div;
+    };
+    class NRx4Reg : public Mem8
+    {
+    public:
+        NRx4Reg(bool& active, Length& length)
+        : active(active), length(length) {}
+        NRx4Reg(bool& active, Length& length, int& frequency_div)
+        : active(active), length(length), frequency_div(&frequency_div) {}
+
+        uint8_t get() const override;
+        void setImpl(uint8_t value) override;
+    private:
+        bool& active;
+        Length& length;
+        int* frequency_div = nullptr;
+    };
     class NR52Reg : public Mem8
     {
     public:
         uint8_t value;
-        uint8_t get() const override { return value; }
+        uint8_t get() const override;
         void setImpl(uint8_t value) override { this->value = value & 0x80; }
     };
     class SoundChannel
     {
     public:
-        void callback(float* stream, int length);
-
-        // settings
         bool active = false;
-        int freq_div = 0;
-        int length = 0;
-        int duty = 0;
-        int freq_sweep_shift = 0;
-        bool freq_sweep_inc = false;
-        int freq_sweep_delay = 0;
-        int volume = 0;
-        bool volume_sweep_inc = false;
-        int volume_sweep_delay = 0;
-
-        // runtime values
         int wave_counter = 0;
-        int freq_sweep_counter = 0;
-        int volume_sweep_counter = 0;
+        FrequencySweep frequency;
+        VolumeEnvelope volume;
+        Length length;
 
+    protected:
+        void update();
+    private:
         int state = 0;
     };
-    SoundChannel square_1;
-    SoundChannel square_2;
-    SoundChannel wave;
-    SoundChannel noise;
+    class SquareWaveSoundChannel : public SoundChannel
+    {
+    public:
+        void callback(float* stream, int length);
+    };
+    class WaveSoundChannel : public SoundChannel
+    {
+    public:
+        void callback(float* stream, int length);
+    };
+    class NoiseSoundChannel : public SoundChannel
+    {
+    public:
+        void callback(float* stream, int length);
+    private:
+        uint32_t lfsr = 0xFFFF;
+    };
+    SquareWaveSoundChannel square_1;
+    SquareWaveSoundChannel square_2;
+    WaveSoundChannel wave;
+    NoiseSoundChannel noise;
 
-    Mem8Ram NR10;
-    Mem8Ram NR11;
-    Mem8Ram NR12;
-    Mem8Ram NR13;
-    Mem8Ram NR14;
-    Mem8Ram NR21;
-    Mem8Ram NR22;
-    Mem8Ram NR23;
-    Mem8Ram NR24;
+    NR10Reg NR10;
+    NRx1Reg NR11{square_1.length, 0x3F};
+    NRx2Reg NR12{square_1.volume};
+    NRx3Reg NR13{square_1.frequency.div};
+    NRx4Reg NR14{square_1.active, square_1.length, square_1.frequency.div};
+    NRx1Reg NR21{square_2.length, 0x3F};
+    NRx2Reg NR22{square_2.volume};
+    NRx3Reg NR23{square_2.frequency.div};
+    NRx4Reg NR24{square_2.active, square_2.length, square_2.frequency.div};
     Mem8Ram NR30;
-    Mem8Ram NR31;
+    NRx1Reg NR31{wave.length, 0xFF};
     Mem8Ram NR32;
-    Mem8Ram NR33;
-    Mem8Ram NR34;
-    Mem8Ram NR41;
-    Mem8Ram NR42;
+    NRx3Reg NR33{wave.frequency.div};
+    NRx4Reg NR34{wave.active, wave.length, wave.frequency.div};
+    NRx1Reg NR41{noise.length, 0x3F};
+    NRx2Reg NR42{noise.volume};
     Mem8Ram NR43;
-    Mem8Ram NR44;
+    NRx4Reg NR44{noise.active, noise.length};
     Mem8Ram NR50;
     Mem8Ram NR51;
     NR52Reg NR52;
