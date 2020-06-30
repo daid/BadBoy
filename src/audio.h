@@ -121,6 +121,8 @@ public:
     {
     public:
         void callback(float* stream, int length);
+    private:
+        int counter = 0;
     };
     class NoiseSoundChannel : public SoundChannel
     {

@@ -107,6 +107,28 @@ void Audio::WaveSoundChannel::callback(float* stream, int stream_length)
 {
     if (!active)
         return;
+    if (!(audio.NR30.value & 0x80))
+        return;
+    int volume_shift = ((audio.NR32.value >> 5) & 0x03) - 1;
+    if (volume_shift > -1)
+    {
+        int freq_div = 2048 - frequency.div;
+        for(int n=0; n<stream_length; n++)
+        {
+            int sample = audio.WAVE[wave_counter / 2].value;
+            if (wave_counter & 1)
+                sample &= 0x0F;
+            else
+                sample >>= 4;
+            stream[n] += 0.01 * (sample >> volume_shift);
+            counter += 32;
+            if (counter >= freq_div)
+            {
+                counter -= freq_div;
+                wave_counter = (wave_counter + 1) & 0x1F;
+            }
+        }
+    }
 
     update();
 }
