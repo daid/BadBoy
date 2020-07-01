@@ -88,8 +88,8 @@ class Disassembler:
     def loadSymbolFile(self, filename):
         self.info.loadSymbolFile(filename)
 
-    def loadAnnotations(self, filename):
-        self.info.loadAnnotations(filename)
+    def loadSource(self, filename):
+        self.info.loadSource(filename)
 
     def parseFullRom(self):
         for addr in range(len(self.rom.data)):
@@ -209,6 +209,9 @@ ld_long_store: MACRO
     db $EA
     dw \\1
 ENDM
+bad_halt: MACRO
+    db $76
+ENDM
 """)
         open(os.path.join(path, "Makefile"), "wt").write("""
 ASM_FILES = $(shell find -type f -name '*.asm')
@@ -240,6 +243,9 @@ src/main.o: $(ASM_FILES)
             if addr in self.info.annotations:
                 for annotation in self.info.annotations[addr]:
                     output.write(";@%s\n" % (": ".join(annotation)))
+            if addr in self.info.comments:
+                for comment in self.info.comments[addr]:
+                    output.write(";%s\n" % (comment))
             if addr in self.info.rom_symbols:
                 symbol = self.info.rom_symbols[addr]
                 output.write("%s:\n" % self.info.formatSymbol(symbol))
@@ -319,7 +325,8 @@ if __name__ == "__main__":
     parser.add_argument("--rstJumpTable", type=str, default=None)
     parser.add_argument("--instrumentation", action='append', default=[])
     parser.add_argument("--sym")
-    parser.add_argument("--annotations")
+    parser.add_argument("--source")
+    parser.add_argument("--output", type=str, required=True)
     args = parser.parse_args()
 
     dis = Disassembler(args.rom)
@@ -329,8 +336,8 @@ if __name__ == "__main__":
         dis.loadInstrumentation(filename)
     if args.sym:
         dis.loadSymbolFile(args.sym)
-    if args.annotations:
-        dis.loadAnnotations(args.annotations)
+    if args.source:
+        dis.loadSource(args.source)
     dis.parseFullRom()
     dis.processAnnotations()
     dis.walkInstructionBlocks()
@@ -338,4 +345,4 @@ if __name__ == "__main__":
     dis.info.updateSymbols()
     dis.info.dumpStats()
 
-    dis.export("out")
+    dis.export(args.output)

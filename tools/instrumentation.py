@@ -1,6 +1,7 @@
 import struct
 from instruction import Ref, Word
 import re
+import os
 
 
 class AutoSymbol:
@@ -136,6 +137,7 @@ class Instrumentation:
             0xffff: "rIE",
         }
         self.annotations = {}
+        self.comments = {}
 
     def mark(self, address, mark):
         self.rom[address] |= mark
@@ -362,17 +364,30 @@ class Instrumentation:
         for value, name in sorted(self.reg_symbols.items()):
             file.write("%-14s EQU $%04x\n" % (name, value))
 
-    def loadAnnotations(self, source_file):
+    def loadSource(self, source_file):
         collected_annotations = []
+        collected_comments = []
         for line in open(source_file, "rt"):
             m = re.match("include \"([^\"]+)\"", line)
             if m:
-                self.loadAnnotations("out/" + m.group(1))
+                path = source_file
+                while True:
+                    path = os.path.dirname(path)
+                    if os.path.isfile(os.path.join(path, m.group(1))):
+                        self.loadSource(os.path.join(path, m.group(1)))
+                        break
+                    assert path != "", "Could not find include: %s" % (m.group(1))
 
             m = re.search(r";@(.+)", line)
             if m:
                 annotation = [s.strip() for s in m.group(1).strip().split(":")]
                 collected_annotations.append(annotation)
+            m = re.search(r"(^|[^;]);([^@;].+)", line)
+            if m:
+                comment = m.group(2)
+                if ";;" in comment:
+                    comment = comment[:comment.find(";;")]
+                collected_comments.append(comment)
 
             m = re.search(r";; ([0-9A-Fa-f]{2}):([0-9A-Fa-f]{4})", line)
             if m:
@@ -380,6 +395,9 @@ class Instrumentation:
                 if collected_annotations:
                     self.annotations[addr] = collected_annotations
                     collected_annotations = []
+                if collected_comments:
+                    self.comments[addr] = collected_comments
+                    collected_comments = []
 
         assert len(collected_annotations) == 0
 
@@ -388,10 +406,10 @@ class Instrumentation:
         file.write("\nSECTION \"WRAM Bank0\", WRAM0[$c000]\n")
         addr = 0xC000
         for value, name in sorted(self.ram_symbols.items()):
-            if addr < 0xD000 and value >= 0xD000:
+            if addr < 0xD000 <= value:
                 file.write("\nSECTION \"WRAM Bank1\", WRAMX[$d000], BANK[$01]\n")
                 addr = 0xD000
-            if addr < 0xFF80 and value >= 0xFF80:
+            if addr < 0xFF80 <= value:
                 file.write("\nSECTION \"HRAM\", HRAM\n")
                 addr = 0xFF80
             if addr < value:
