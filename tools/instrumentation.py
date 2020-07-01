@@ -315,6 +315,8 @@ class Instrumentation:
                 continue
             if re.match(r"(unknown|code|data)_[0-9a-fA-F]{3}_[0-9a-fA-F]{4}\.(unknown|code|data)_[0-9a-fA-F]{4}$", symbol):
                 continue
+            if re.match(r"[wh][0-9A-F]{4}$", symbol):
+                continue
             if addr < 0x4000:
                 assert bank == 0
                 self.rom_symbols[addr] = symbol
