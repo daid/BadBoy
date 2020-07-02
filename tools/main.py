@@ -217,7 +217,7 @@ ENDM
 ASM_FILES = $(shell find -type f -name '*.asm')
 
 rom.gb: src/main.o
-\trgblink -n $@.sym -m $@.map -o $@ $^
+\trgblink -n $(basename $@).sym -o $@ $^
 \trgbfix --validate $@
 
 src/main.o: $(ASM_FILES)
