@@ -303,8 +303,8 @@ Opcode decode(uint16_t address)
     case 0xE1: return {Opcode::POP16, 1, 12, &cpu.H, &cpu.L};
     case 0xF1: return {Opcode::POP16, 1, 12, &cpu.A, &cpu.F};
 
-    case 0xC2: return {Opcode::JPNZ, 3, 8, &mm::get(address + 2), &mm::get(address + 1)};
-    case 0xD2: return {Opcode::JPNC, 3, 8, &mm::get(address + 2), &mm::get(address + 1)};
+    case 0xC2: return {Opcode::JPNZ, 3, 12, &mm::get(address + 2), &mm::get(address + 1)};
+    case 0xD2: return {Opcode::JPNC, 3, 12, &mm::get(address + 2), &mm::get(address + 1)};
     case 0xE2: return {Opcode::LD8, 1, 8, nullptr, &mm::get(0xFF00 + cpu.C.get()), nullptr, &cpu.A};
     case 0xF2: return {Opcode::LD8, 1, 8, nullptr, &cpu.A, nullptr, &mm::get(0xFF00 + cpu.C.get())};
 

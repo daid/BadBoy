@@ -10,6 +10,8 @@ public:
     public:
         uint8_t get() const override;
         void setImpl(uint8_t) override;
+    private:
+        uint32_t offset = 0;
     };
     class BasicReg : public Mem8
     {

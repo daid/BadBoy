@@ -6,11 +6,12 @@ Timer timer;
 
 uint8_t Timer::DivReg::get() const
 {
-    return cpu.cycles >> 8;
+    return (cpu.cycles - offset) >> 8;
 }
 
 void Timer::DivReg::setImpl(uint8_t value)
 {
+    offset = cpu.cycles;
 }
 
 uint8_t Timer::BasicReg::get() const
@@ -35,7 +36,7 @@ void Timer::update()
         case 2: interval = 64; break;
         case 3: interval = 256; break;
         }
-        if (cpu.cycles - timer_tick_cycle >= interval)
+        while(cpu.cycles - timer_tick_cycle >= interval)
         {
             timer_tick_cycle += interval;
             if (TIMA.value == 0xFF)

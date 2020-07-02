@@ -139,7 +139,7 @@ class Disassembler:
 
     def _walkInstructionBlock(self, addr):
         a_value = None
-        active_bank = None
+        active_bank = None if self.rom.bankCount() > 2 else 1
         info = self.info
 
         while True:

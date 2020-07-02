@@ -48,8 +48,6 @@ uint16_t Cpu::getHLdec()
     return result + 1;
 }
 
-#define NOT_IMPLEMENTED() do { printf("Not implemented instruction: %d at %s:%d\n", opcode.type, __FILE__, __LINE__); system("pause"); } while(0)
-
 void Cpu::execute(const Opcode& opcode)
 {
     mm::get(pc).mark(MARK_INSTR);
@@ -506,7 +504,8 @@ void Cpu::execute(const Opcode& opcode)
         opcode.dst_l->set(opcode.dst_l->get() | (1 << opcode.value));
         break;
 
-    case Opcode::ERROR: NOT_IMPLEMENTED(); break;
+    case Opcode::ERROR:
+        break;
     }
 }
 
@@ -519,6 +518,7 @@ void Cpu::setInterrupt(uint8_t mask)
 
 void Cpu::interrupt(uint16_t vector)
 {
+    cycles += 20;
     ime = false;
     mm::get(getSP() - 1).set(pc >> 8);
     mm::get(getSP() - 2).set(pc);
