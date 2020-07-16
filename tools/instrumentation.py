@@ -160,6 +160,21 @@ class Instrumentation:
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
 
+    def markAsPointer(self, rom, address):
+        target = struct.unpack("<H", rom.data[address:address+2])[0]
+
+        if 0x4000 <= target < 0x8000:
+            if address < 0x4000:
+                return None
+            target = (target & 0x3FFF) | (address & 0xFFFFC000)
+        elif target >= 0x8000:
+            return None
+
+        self.mark(address, self.MARK_DATA | self.MARK_PTR_LOW)
+        self.mark(address + 1, self.MARK_DATA | self.MARK_PTR_HIGH)
+        self.addAbsoluteRomSymbol(target)
+        return target
+
     def markAsCodePointer(self, rom, address):
         target = struct.unpack("<H", rom.data[address:address+2])[0]
 
@@ -253,7 +268,7 @@ class Instrumentation:
                 symbol.setAsGlobalSymbol()
 
     def addRelativeSymbol(self, address, source_address):
-        if address < 0x1000:
+        if address < 0x0400:
             if source_address >= 0x4000:
                 return
             if abs(address - source_address) > 0x100:
