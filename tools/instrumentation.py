@@ -182,6 +182,9 @@ class Instrumentation:
             return None
         return bank
 
+    def setActiveBank(self, addr, bank):
+        self.rom[addr] = (self.rom[addr] & ~self.MARK_BANK_MASK) | (bank << self.MARK_BANK_SHIFT)
+
     def classifyData(self, addr):
         mark = self.rom[addr]
         if not (mark & self.MARK_DATA):
@@ -360,7 +363,11 @@ class Instrumentation:
                 return self.formatSymbol(self.ram_symbols[parameter])
             if (parameter >= 0x1000 or pc_target) and parameter < 0x4000 and parameter in self.rom_symbols:
                 return self.formatSymbol(self.rom_symbols[parameter])
-            if 0x4000 <= parameter < 0x8000 and base_address >= 0x4000:  # upper bank target
+            if 0x4000 <= parameter < 0x8000 and self.getActiveBank(base_address) is not None:
+                addr = (parameter & 0x3FFF) | (self.getActiveBank(base_address) << 14)
+                if addr in self.rom_symbols:
+                    return self.formatSymbol(self.rom_symbols[addr])
+            elif 0x4000 <= parameter < 0x8000 and base_address >= 0x4000:  # upper bank target
                 addr = (parameter & 0x3FFF) | (base_address & 0xFFFFC000)
                 if addr in self.rom_symbols:
                     return self.formatSymbol(self.rom_symbols[addr])

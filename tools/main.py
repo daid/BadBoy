@@ -2,6 +2,7 @@ from rom import ROM
 from instruction import Instruction
 from instrumentation import Instrumentation
 import instruction
+import annotations
 import struct
 import PIL.Image
 import argparse
@@ -82,7 +83,7 @@ class Disassembler:
         self.instr_addr_todo = [0x0100, 0x0000, 0x0040, 0x0048, 0x0050, 0x0058, 0x0060]
         self.rstJumpTable = None
 
-        self.__formatter = {}
+        self.formatter = {}
 
     def loadInstrumentation(self, filename):
         self.info.loadInstrumentation(filename)
@@ -109,40 +110,9 @@ class Disassembler:
             self.info.addAbsoluteRomSymbol(addr)
 
     def processAnnotations(self):
-        for addr, annotations in self.info.annotations.items():
-            for annotation in annotations:
-                if annotation[0].lower() == "jumptable":
-                    if len(annotation) > 1:
-                        for n in range(int(annotation[1])):
-                            target = self.info.markAsCodePointer(self.rom, addr)
-                            if target is not None:
-                                self.instr_addr_todo.append(target)
-                            addr += 2
-                    else:
-                        first = True
-                        while addr not in self.info.rom_symbols or first:
-                            first = False
-                            target = self.info.markAsCodePointer(self.rom, addr)
-                            if target is not None:
-                                self.instr_addr_todo.append(target)
-                            addr += 2
-                elif annotation[0].lower() == "gfx":
-                    first = True
-                    while addr not in self.info.rom_symbols or first:
-                        first = False
-                        self.info.rom[addr] = self.info.MARK_DATA | self.info.ID_VRAM
-                        addr += 1
-                elif annotation[0].lower() == "data_records":
-                    count = int(annotation[1])
-                    size = int(annotation[2])
-                    def formatDataRecord(output, addr):
-                        self.formatLine(output, addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), self.rom.data[addr:addr + size])), is_data=True)
-                        return addr + size
-                    for n in range(count):
-                        self.__formatter[addr] = formatDataRecord
-                        addr += size
-                else:
-                    print("Unknown annotation:", annotation)
+        for addr, annos in self.info.annotations.items():
+            for annotation in annos:
+                annotations.ALL[annotation[0].lower()](self, addr, annotation[1:])
 
     def walkInstructionBlocks(self):
         while self.instr_addr_todo:
@@ -275,8 +245,8 @@ all: rom.gb
             addr = formatter(output, addr)
 
     def getFormatter(self, addr):
-        if addr in self.__formatter:
-            return self.__formatter[addr]
+        if addr in self.formatter:
+            return self.formatter[addr]
         if self.info.hasMark(addr, self.info.MARK_INSTR):
             return self.__formatInstruction
         elif self.info.hasMark(addr, self.info.MARK_PTR_LOW) and self.info.hasMark(addr + 1, self.info.MARK_PTR_HIGH):
@@ -343,6 +313,16 @@ all: rom.gb
 
 
 if __name__ == "__main__":
+    import sys
+    import os
+    import importlib
+    import pkgutil
+
+    sys.path.append(os.path.join(os.getcwd(), "plugins"))
+    for module in pkgutil.iter_modules():
+        if module.name.startswith("badboy_"):
+            importlib.import_module(module.name)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("rom", type=str)
     parser.add_argument("--rstJumpTable", type=str, default=None)
