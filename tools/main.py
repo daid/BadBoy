@@ -82,6 +82,8 @@ class Disassembler:
         self.instr_addr_todo = [0x0100, 0x0000, 0x0040, 0x0048, 0x0050, 0x0058, 0x0060]
         self.rstJumpTable = None
 
+        self.__formatter = {}
+
     def loadInstrumentation(self, filename):
         self.info.loadInstrumentation(filename)
 
@@ -130,6 +132,15 @@ class Disassembler:
                         first = False
                         self.info.rom[addr] = self.info.MARK_DATA | self.info.ID_VRAM
                         addr += 1
+                elif annotation[0].lower() == "data_records":
+                    count = int(annotation[1])
+                    size = int(annotation[2])
+                    def formatDataRecord(output, addr):
+                        self.formatLine(output, addr, size, "db   " + ", ".join(map(lambda n: "$%02x" % (n), self.rom.data[addr:addr + size])), is_data=True)
+                        return addr + size
+                    for n in range(count):
+                        self.__formatter[addr] = formatDataRecord
+                        addr += size
                 else:
                     print("Unknown annotation:", annotation)
 
@@ -264,6 +275,8 @@ all: rom.gb
             addr = formatter(output, addr)
 
     def getFormatter(self, addr):
+        if addr in self.__formatter:
+            return self.__formatter[addr]
         if self.info.hasMark(addr, self.info.MARK_INSTR):
             return self.__formatInstruction
         elif self.info.hasMark(addr, self.info.MARK_PTR_LOW) and self.info.hasMark(addr + 1, self.info.MARK_PTR_HIGH):
