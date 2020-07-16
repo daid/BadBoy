@@ -127,7 +127,8 @@ void Cpu::execute(const Opcode& opcode)
         }
         F.Z = tmp == 0x00;
         F.N = false;
-        opcode.dst_l->set(tmp);
+        if (tmp != opcode.dst_l->get()) // prevent breaking origin tracking if nothing is added
+            opcode.dst_l->set(tmp);
         break;
     case Opcode::ADD16:{
         int dst = opcode.dst_l->get() | opcode.dst_h->get() << 8;
