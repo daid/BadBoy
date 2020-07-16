@@ -74,7 +74,19 @@ class Instrumentation:
             0x0058: "SerialTransferInterrupt",
             0x0060: "JoypadInterrupt",
             0x0100: "Reset",
-            0x0104: "Header",
+            0x0104: "HeaderLogo",
+            0x0134: "HeaderTitle",
+            0x0143: "HeaderGBCFlag",
+            0x0144: "HeaderNewLicenseCode",
+            0x0146: "HeaderSGBFlag",
+            0x0147: "HeaderCardType",
+            0x0148: "HeaderRomSize",
+            0x0149: "HeaderRamSize",
+            0x014A: "HeaderWorldOrJapanFlag",
+            0x014B: "HeaderLicenseCode",
+            0x014C: "HeaderROMVersion",
+            0x014D: "HeaderChecksum",
+            0x014E: "HeaderGlobalChecksum",
         }
         self.ram_symbols = {}
         self.reg_symbols = {

@@ -222,8 +222,17 @@ rom.gb: src/main.o
 
 src/main.o: $(ASM_FILES)
 \trgbasm --export-all -o $@ src/main.asm
-""")
 
+check: rom.gb rom.md5
+\tmd5sum -c rom.md5
+
+clean:
+\trm -rf src/main.o rom.gb rom.sym
+
+.PHONY: all clean check
+all: rom.gb
+""")
+        open(os.path.join(path, "rom.md5"), "wt").write("%s rom.gb\n" % (self.rom.md5sum()))
         for bank in range(len(self.rom.data) // 0x4000):
             if bank == 0:
                 main.write("\nSECTION \"bank00\", ROM0[$0000]\n")
@@ -233,6 +242,7 @@ src/main.o: $(ASM_FILES)
             self._writeBank(bank, open(os.path.join(path, "src", "bank%02X.asm" % (bank)), "wt"))
 
     def _writeBank(self, bank, output):
+        output.write(";; Disassembled with BadBoy Disassembler: https://github.com/daid/BadBoy\n")
         addr = 0x4000 * bank
         end_of_bank = addr + 0x4000
         while end_of_bank > addr and self.rom.data[end_of_bank-1] == 0x00:
