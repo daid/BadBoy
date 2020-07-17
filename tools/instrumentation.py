@@ -160,7 +160,7 @@ class Instrumentation:
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
 
-    def markAsPointer(self, rom, address):
+    def markAsPointer(self, rom, address, *, name=None):
         target = struct.unpack("<H", rom.data[address:address+2])[0]
 
         if 0x4000 <= target < 0x8000:
@@ -172,7 +172,7 @@ class Instrumentation:
 
         self.mark(address, self.MARK_DATA | self.MARK_PTR_LOW)
         self.mark(address + 1, self.MARK_DATA | self.MARK_PTR_HIGH)
-        self.addAbsoluteRomSymbol(target)
+        self.addAbsoluteRomSymbol(target, name=name)
         return target
 
     def markAsCodePointer(self, rom, address):
@@ -256,10 +256,13 @@ class Instrumentation:
             else:
                 self.ram_symbols[address] = "w%04X" % (address)
 
-    def addAbsoluteRomSymbol(self, address, source_address=None):
+    def addAbsoluteRomSymbol(self, address, source_address=None, *, name=None):
         symbol = self.rom_symbols.get(address, None)
-        if not symbol:
-            symbol = AutoSymbol(address)
+        if not symbol or name is not None:
+            if name is not None:
+                symbol = name
+            else:
+                symbol = AutoSymbol(address)
             self.rom_symbols[address] = symbol
         if isinstance(symbol, AutoSymbol):
             if source_address is not None:
@@ -267,7 +270,7 @@ class Instrumentation:
             else:
                 symbol.setAsGlobalSymbol()
 
-    def addRelativeSymbol(self, address, source_address):
+    def addRelativeSymbol(self, address, source_address, *, name=None):
         if address < 0x0400:
             if source_address >= 0x4000:
                 return
@@ -283,7 +286,7 @@ class Instrumentation:
             if source_address < 0x4000:
                 return
             address = (address & 0x3fff) | (source_address & 0xFFFFC000)
-        self.addAbsoluteRomSymbol(address)
+        self.addAbsoluteRomSymbol(address, name=name)
 
     def updateSymbols(self):
         changes = True
