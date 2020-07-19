@@ -2,9 +2,13 @@
 
 def jumpTable(dis, addr, params):
     if len(params) > 0:
-        assert len(params) == 1
+        assert len(params) < 3
+        label_format = params[1] if len(params) > 1 else None
         for n in range(int(params[0])):
-            target = dis.info.markAsCodePointer(dis.rom, addr)
+            if label_format:
+                target = dis.info.markAsCodePointer(dis.rom, addr, name=label_format % (n))
+            else:
+                target = dis.info.markAsCodePointer(dis.rom, addr)
             if target is not None:
                 dis.instr_addr_todo.append(target)
             addr += 2
@@ -36,8 +40,16 @@ def dataRecords(dis, addr, params):
         dis.formatter[addr] = formatDataRecord
         addr += size
 
+def bank(dis, addr, params):
+    assert len(params) == 1
+    bank = int(params[0])
+    dis.info.setActiveBank(addr, bank)
+    dis.info.setActiveBank(addr + 1, bank)
+    dis.info.setActiveBank(addr + 2, bank)
+
 ALL = {
     "jumptable": jumpTable,
     "gfx": gfx,
-    "data_records": dataRecords
+    "data_records": dataRecords,
+    "bank": bank,
 }

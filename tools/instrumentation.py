@@ -54,6 +54,8 @@ class Instrumentation:
     MARK_DATA = (0x02 << 40)
     MARK_PTR_LOW = (0x04 << 40)
     MARK_PTR_HIGH = (0x08 << 40)
+    MARK_WORD_LOW = (0x10 << 40)
+    MARK_WORD_HIGH = (0x20 << 40)
     MARK_BANK_SHIFT = (48)
     MARK_BANK_MASK = (0xFFF << 48)
 
@@ -160,6 +162,11 @@ class Instrumentation:
     def hasMark(self, address, mark):
         return (self.rom[address] & mark) == mark
 
+    def markAsWord(self, rom, address, *, name=None):
+        self.mark(address, self.MARK_DATA | self.MARK_WORD_LOW)
+        self.mark(address + 1, self.MARK_DATA | self.MARK_WORD_HIGH)
+        return struct.unpack("<H", rom.data[address:address+2])[0]
+
     def markAsPointer(self, rom, address, *, name=None):
         target = struct.unpack("<H", rom.data[address:address+2])[0]
 
@@ -175,7 +182,7 @@ class Instrumentation:
         self.addAbsoluteRomSymbol(target, name=name)
         return target
 
-    def markAsCodePointer(self, rom, address):
+    def markAsCodePointer(self, rom, address, name=None):
         target = struct.unpack("<H", rom.data[address:address+2])[0]
 
         if 0x4000 <= target < 0x8000:
@@ -188,7 +195,7 @@ class Instrumentation:
         self.mark(address, self.MARK_DATA | self.MARK_PTR_LOW)
         self.mark(address + 1, self.MARK_DATA | self.MARK_PTR_HIGH)
         self.mark(target, self.MARK_INSTR)
-        self.addAbsoluteRomSymbol(target)
+        self.addAbsoluteRomSymbol(target, name=name)
         return target
 
     def getActiveBank(self, addr):
@@ -323,7 +330,7 @@ class Instrumentation:
                 if "." not in new_symbols[addr]:
                     scope = new_symbols[addr]
             else:
-                print("drop %x" % (addr))
+                print("drop %04x" % (addr))
         self.rom_symbols = new_symbols
 
     def loadInstrumentation(self, filename):
@@ -379,7 +386,7 @@ class Instrumentation:
                 return self.formatSymbol(self.reg_symbols[parameter])
             if parameter >= 0x8000 and parameter in self.ram_symbols:
                 return self.formatSymbol(self.ram_symbols[parameter])
-            if (parameter >= 0x1000 or pc_target) and parameter < 0x4000 and parameter in self.rom_symbols:
+            if (parameter >= 0x0800 or pc_target) and parameter < 0x4000 and parameter in self.rom_symbols:
                 return self.formatSymbol(self.rom_symbols[parameter])
             if 0x4000 <= parameter < 0x8000 and self.getActiveBank(base_address) is not None:
                 addr = (parameter & 0x3FFF) | (self.getActiveBank(base_address) << 14)

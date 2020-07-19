@@ -251,6 +251,8 @@ all: rom.gb
             return self.__formatInstruction
         elif self.info.hasMark(addr, self.info.MARK_PTR_LOW) and self.info.hasMark(addr + 1, self.info.MARK_PTR_HIGH):
             return self.__formatPointer
+        elif self.info.hasMark(addr, self.info.MARK_WORD_LOW) and self.info.hasMark(addr + 1, self.info.MARK_WORD_HIGH):
+            return self.__formatWord
         elif self.info.classifyDataAsChar(addr) == "G" and self.info.classifyDataAsChar(addr + 1) == "G":
             return self.__formatGraphics
         return self.__formatRawData
@@ -259,6 +261,11 @@ all: rom.gb
         instr = Instruction(self.rom, addr)
         self.formatLine(output, addr, instr.size, instr.format(self.info))
         return addr + instr.size
+
+    def __formatWord(self, output, addr):
+        value = struct.unpack("<H", self.rom.data[addr:addr + 2])[0]
+        self.formatLine(output, addr, 2, "dw   $%04x" % (value))
+        return addr + 2
 
     def __formatPointer(self, output, addr):
         pointer = struct.unpack("<H", self.rom.data[addr:addr + 2])[0]
