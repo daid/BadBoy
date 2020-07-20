@@ -85,6 +85,7 @@ class Disassembler:
 
         self.formatter = {}
         self.macros = {}
+        self.charmaps = {}
         self.macros["ld_long_load"] = "db $FA\ndw \\1"
         self.macros["ld_long_store"] = "db $EA\ndw \\1"
         self.macros["bad_halt"] = "db $76"
@@ -191,6 +192,18 @@ class Disassembler:
             for line in contents.rstrip().split("\n"):
                 macro_file.write("    %s\n" % (line.rstrip()))
             macro_file.write("ENDM\n")
+
+        if self.charmaps:
+            main.write("include \"src/charmaps.asm\"\n")
+            charmap_file = open(os.path.join(path, "src", "charmaps.asm"), "wt")
+            for name, data in sorted(self.charmaps.items()):
+                if name == "main":
+                    charmap_file.write("SETCHARMAP %s\n" % (name))
+                else:
+                    charmap_file.write("NEWCHARMAP %s\n" % (name))
+                for key, value in sorted(data.items()):
+                    charmap_file.write("CHARMAP \"%s\", %d\n" % (value, key))
+
         open(os.path.join(path, "Makefile"), "wt").write("""
 ASM_FILES = $(shell find -type f -name '*.asm')
 
