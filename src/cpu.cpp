@@ -90,6 +90,8 @@ void Cpu::execute(const Opcode& opcode)
         F.H = (opcode.dst_l->get() & 0x0F) == 0x00;
         break;
     case Opcode::INC16:
+        opcode.dst_l->markOrigin(MARK_WORD_LOW);
+        opcode.dst_h->markOrigin(MARK_WORD_HIGH);
         opcode.dst_l->set(opcode.dst_l->get() + 1);
         if (opcode.dst_l->get() == 0)
             opcode.dst_h->set(opcode.dst_h->get() + 1);
@@ -131,6 +133,10 @@ void Cpu::execute(const Opcode& opcode)
             opcode.dst_l->set(tmp);
         break;
     case Opcode::ADD16:{
+        opcode.src_l->markOrigin(MARK_WORD_LOW);
+        opcode.src_h->markOrigin(MARK_WORD_HIGH);
+        opcode.dst_l->markOrigin(MARK_WORD_LOW);
+        opcode.dst_h->markOrigin(MARK_WORD_HIGH);
         int dst = opcode.dst_l->get() | opcode.dst_h->get() << 8;
         int src = opcode.src_l->get() | opcode.src_h->get() << 8;
         int res = dst + src;
