@@ -376,17 +376,17 @@ class Instrumentation:
             elif addr < 0xFFFF:
                 self.ram_symbols[addr] = symbol
 
-    def formatParameter(self, base_address, parameter, *, pc_target=False, is_word=False):
+    def formatParameter(self, base_address, parameter, *, pc_target=False, is_word=False, is_pointer=False):
         if isinstance(parameter, Ref):
-            return "[%s]" % (self.formatParameter(base_address, parameter.target, pc_target=pc_target))
+            return "[%s]" % (self.formatParameter(base_address, parameter.target, pc_target=pc_target, is_pointer=is_pointer))
         if isinstance(parameter, Word):
-            return self.formatParameter(base_address, parameter.value, pc_target=pc_target, is_word=True)
+            return self.formatParameter(base_address, parameter.value, pc_target=pc_target, is_word=True, is_pointer=is_pointer)
         if isinstance(parameter, int):
             if not pc_target and parameter in self.reg_symbols:
                 return self.formatSymbol(self.reg_symbols[parameter])
             if parameter >= 0x8000 and parameter in self.ram_symbols:
                 return self.formatSymbol(self.ram_symbols[parameter])
-            if (parameter >= 0x0800 or pc_target) and parameter < 0x4000 and parameter in self.rom_symbols:
+            if (parameter >= 0x1000 or pc_target or is_pointer) and parameter < 0x4000 and parameter in self.rom_symbols:
                 return self.formatSymbol(self.rom_symbols[parameter])
             if 0x4000 <= parameter < 0x8000 and self.getActiveBank(base_address) is not None:
                 addr = (parameter & 0x3FFF) | (self.getActiveBank(base_address) << 14)

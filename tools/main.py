@@ -269,7 +269,7 @@ all: rom.gb
 
     def __formatPointer(self, output, addr):
         pointer = struct.unpack("<H", self.rom.data[addr:addr + 2])[0]
-        self.formatLine(output, addr, 2, "dw   %s" % self.info.formatParameter(addr, pointer, is_word=True))
+        self.formatLine(output, addr, 2, "dw   %s" % self.info.formatParameter(addr, pointer, is_word=True, is_pointer=True))
         return addr + 2
 
     def __formatGraphics(self, output, addr):
