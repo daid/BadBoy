@@ -85,9 +85,9 @@ class Disassembler:
 
         self.formatter = {}
         self.macros = {}
-        self.macros["ld_long_load"] = "    db $FA\n    dw \\1"
-        self.macros["ld_long_store"] = "    db $EA\n    dw \\1"
-        self.macros["bad_halt"] = "    db $76"
+        self.macros["ld_long_load"] = "db $FA\ndw \\1"
+        self.macros["ld_long_store"] = "db $EA\ndw \\1"
+        self.macros["bad_halt"] = "db $76"
 
     def loadInstrumentation(self, filename):
         self.info.loadInstrumentation(filename)
@@ -187,7 +187,10 @@ class Disassembler:
         self.info.outputRam(open(os.path.join(path, "constants", "memory.asm"), "wt"))
         macro_file = open(os.path.join(path, "src", "macros.asm"), "wt")
         for macro, contents in sorted(self.macros.items()):
-            macro_file.write("%s: MACRO\n%s\nENDM\n" % (macro, contents.rstrip()))
+            macro_file.write("%s: MACRO\n" % (macro))
+            for line in contents.rstrip().split("\n"):
+                macro_file.write("    %s\n" % (line.rstrip()))
+            macro_file.write("ENDM\n")
         open(os.path.join(path, "Makefile"), "wt").write("""
 ASM_FILES = $(shell find -type f -name '*.asm')
 
