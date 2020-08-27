@@ -21,6 +21,16 @@ def jumpTable(dis, addr, params):
                 dis.instr_addr_todo.append(target)
             addr += 2
 
+def pointerTable(dis, addr, params):
+    assert 0 < len(params) < 2
+    label_format = params[1] if len(params) > 1 else None
+    for n in range(int(params[0])):
+        if label_format:
+            target = dis.info.markAsPointer(dis.rom, addr, name=label_format % (n))
+        else:
+            target = dis.info.markAsPointer(dis.rom, addr)
+        addr += 2
+
 def gfx(dis, addr, params):
     assert len(params) == 0
     first = True
@@ -52,4 +62,5 @@ ALL = {
     "gfx": gfx,
     "data_records": dataRecords,
     "bank": bank,
+    "pointertable": pointerTable,
 }
