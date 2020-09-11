@@ -499,6 +499,8 @@ class Instruction:
             return "ld_long_store %s" % (info.formatParameter(self.address, p0.target))
         if self.type == LD and isinstance(self.p1, Ref) and isinstance(self.p1.target, Word) and self.p1.target.value >= 0xFF00 and self.p0 == A:
             return "ld_long_load %s" % (info.formatParameter(self.address, p1.target))
+        if self.type == ADD and self.p0 == SP:
+            return "add  SP, %d" % (self.p1)
 
         if self.condition is not None:
             p1 = p0
