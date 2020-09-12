@@ -23,7 +23,7 @@ void Mem8::mark(uint64_t mark)
 {
     used_as |= mark;
     used_as &=~MARK_BANK_MASK;
-    used_as |= uint64_t(card.rom_upper_bank) << MARK_BANK_SHIFT;
+    used_as |= uint64_t(card.mbc->getRomBankNr()) << MARK_BANK_SHIFT;
 }
 
 void Mem8::markOrigin(uint64_t mark)

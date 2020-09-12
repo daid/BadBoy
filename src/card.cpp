@@ -18,16 +18,10 @@ public:
 
     void setImpl(uint8_t value) override
     {
-        if (id >= 0x2000 && id < 0x4000)
-        {
-            if (value == 0)
-                value = 1;
-            card.rom_upper_bank = value & card.rom_bank_mask;
-        }
-        if (id >= 0x4000 && (id & 0x2000) == 0x0000)
-        {
-            card.ram_bank = value & 0x03;
-        }
+        if (id < 0x4000)
+            card.mbc->writeRom(id, value);
+        else
+            card.mbc->writeRom((id & 0x3fff) | 0x4000, value);
     }
 };
 
@@ -42,6 +36,8 @@ void Card::init()
     sram.resize(0x8000);
     for(uint32_t n=0; n<0x100; n++)
         bootrom[n].id = n | ID_ROM;
+    for(uint32_t n=0; n<sram.size(); n++)
+        sram[n].id = n | ID_SRAM;
 
     FILE* f = fopen("dmg_boot.bin", "rb");
     if (f)
@@ -84,6 +80,7 @@ bool Card::load(const char* filename)
     
     fseek(f, 0, SEEK_END);
     uint32_t size = ftell(f);
+    uint32_t rom_bank_mask = 1;
     while(uint32_t(rom_bank_mask + 1) * 0x4000 < size)
         rom_bank_mask = (rom_bank_mask << 1) | 0x01;
     size = (rom_bank_mask + 1) * 0x4000;
@@ -98,23 +95,68 @@ bool Card::load(const char* filename)
         n += 1;
     }
 
-    //TODO: We currently emulate a MBC5+RAM, which should be compattible with most things.
-    //      But from the header we can read which MBC we should be using.
-    printf("Card type: %02x\n", rom[0x147].value);
+    mbc = std::make_unique<MBCNone>();
+    switch(rom[0x147].value)
+    {
+    case 0x00:
+        break;
+    case 0x01:
+    case 0x02:
+    case 0x03:
+        mbc = std::make_unique<MBC1>();
+        break;
+    case 0x05:
+    case 0x06:
+        mbc = std::make_unique<MBC2>();
+        break;
+    case 0x08:
+    case 0x09:
+        break;
+    case 0x0b:
+    case 0x0c:
+    case 0x0d:
+        //mbc = std::make_unique<MMM01>();
+        break;
+    case 0x0f:
+    case 0x10:
+        mbc = std::make_unique<MBC3RTC>();
+        break;
+    case 0x11:
+    case 0x12:
+    case 0x13:
+        mbc = std::make_unique<MBC3>();
+        break;
+    case 0x19:
+    case 0x1a:
+    case 0x1b:
+    case 0x1c://rumble pack?
+    case 0x1d://rumble pack?
+    case 0x1e://rumble pack?
+        mbc = std::make_unique<MBC5>();
+        break;
+    case 0x20:
+        //mbc = std::make_unique<MBC6>();
+        break;
+    case 0x22:
+        //mbc = std::make_unique<MBC7>();
+        break;
+    }
+    printf("Card type: %02x: %s\n", rom[0x147].value, typeid(*mbc.get()).name());
+
     fclose(f);
     return true;
 }
 
 Mem8& Card::getRom(uint16_t address)
 {
-    if (address >= 0x4000)
-        return rom[rom_upper_bank * 0x4000 + (address & 0x3FFF)];
-    return rom[address];
+    uint32_t rom_address = mbc->mapRom(address);
+    return rom[rom_address % rom.size()];
 }
 
 Mem8& Card::getSRam(uint16_t address)
 {
-    return sram[ram_bank * 0x2000 + address];
+    uint32_t sram_address = mbc->mapSRam(address);
+    return sram[sram_address % sram.size()];
 }
 
 Mem8& Card::getBoot(uint16_t address)

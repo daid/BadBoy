@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     initCore();
 
     coreLoop();
-    printf("Done: %02x:%04x:%02x:%d\n", card.rom_upper_bank, cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
+    printf("Done: %04x:%02x:%d\n", cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
 
     if (!output_instrumentation_file.empty())
     {
