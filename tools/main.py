@@ -89,6 +89,7 @@ class Disassembler:
         self.macros["ld_long_load"] = "db $FA\ndw \\1"
         self.macros["ld_long_store"] = "db $EA\ndw \\1"
         self.macros["bad_halt"] = "db $76"
+        self.macros["bad_stop"] = "db $10"
 
     def loadInstrumentation(self, filename):
         self.info.loadInstrumentation(filename)
@@ -264,7 +265,9 @@ all: rom.gb
         elif self.info.hasMark(addr, self.info.MARK_WORD_LOW) and self.info.hasMark(addr + 1, self.info.MARK_WORD_HIGH):
             return self.__formatWord
         elif self.info.classifyDataAsChar(addr) == "G" and self.info.classifyDataAsChar(addr + 1) == "G":
-            return self.__formatGraphics
+            if (self.info.rom[addr] & 1) == 0 and (self.info.rom[addr + 1] & 1) == 1:
+                return self.__formatGraphics2bpp
+            return self.__formatGraphics1bpp
         return self.__formatRawData
 
     def __formatInstruction(self, output, addr):
@@ -282,7 +285,18 @@ all: rom.gb
         self.formatLine(output, addr, 2, "dw   %s" % self.info.formatParameter(addr, pointer, is_word=True, is_pointer=True))
         return addr + 2
 
-    def __formatGraphics(self, output, addr):
+    def __formatGraphics1bpp(self, output, addr):
+        a = self.rom.data[addr+0]
+        gfx = ""
+        for n in range(8):
+            p = 0
+            if a & (0x80 >> n):
+                p |= 1
+            gfx += "%d" % p
+        self.formatLine(output, addr, 2, "db   %%%s" % gfx)
+        return addr + 1
+
+    def __formatGraphics2bpp(self, output, addr):
         a = self.rom.data[addr+0]
         b = self.rom.data[addr+1]
         gfx = ""

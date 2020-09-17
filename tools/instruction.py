@@ -2,6 +2,7 @@ import struct
 
 NOP = "nop"
 STOP = "stop"
+BAD_STOP = "bad_stop"
 HALT = "halt"
 BAD_HALT = "bad_halt"
 JP = "jp"
@@ -95,7 +96,12 @@ class Instruction:
         op = rom.data[address]
 
         if op == 0x00: self.__set(NOP)
-        if op == 0x10: self.__set(STOP)
+        if op == 0x10:
+            if self.__getUInt8() == 0x00: # Proper HALT needs a NOP after HALT
+                self.__set(STOP)
+            else:
+                self.size = 1
+                self.__set(BAD_STOP)
         if op == 0x20: self.__set(JR, self.__getRelativeWord(), condition=COND_NZ)
         if op == 0x30: self.__set(JR, self.__getRelativeWord(), condition=COND_NC)
 
@@ -347,14 +353,14 @@ class Instruction:
         if op == 0xF2: self.__set(LDH, A, Ref(C))
 
         if op == 0xC3: self.__set(JP, self.__getUInt16())
-        # if op == 0xD3: self.__set(ERROR)
-        # if op == 0xE3: self.__set(ERROR)
+        if op == 0xD3: self.__set("ERROR", 0xD3)
+        if op == 0xE3: self.__set("ERROR", 0xE3)
         if op == 0xF3: self.__set(DI)
 
         if op == 0xC4: self.__set(CALL, self.__getUInt16(), condition=COND_NZ)
         if op == 0xD4: self.__set(CALL, self.__getUInt16(), condition=COND_NC)
-        # if op == 0xE4: self.__set(ERROR)
-        # if op == 0xF4: self.__set(ERROR)
+        if op == 0xE4: self.__set("ERROR", 0xE4)
+        if op == 0xF4: self.__set("ERROR", 0xF4)
 
         if op == 0xC5: self.__set(PUSH, BC)
         if op == 0xD5: self.__set(PUSH, DE)
@@ -387,19 +393,19 @@ class Instruction:
         if op == 0xFA: self.__set(LD, A, Ref(self.__getUInt16()))
 
         if op == 0xCB: self.__decodeCB(self.__getUInt8())
-        # if op == 0xDB: self.__set(ERROR)
-        # if op == 0xEB: self.__set(ERROR)
+        if op == 0xDB: self.__set("ERROR", 0xDB)
+        if op == 0xEB: self.__set("ERROR", 0xEB)
         if op == 0xFB: self.__set(EI)
 
         if op == 0xCC: self.__set(CALL, self.__getUInt16(), condition=COND_Z)
         if op == 0xDC: self.__set(CALL, self.__getUInt16(), condition=COND_C)
-        # if op == 0xEC: self.__set(ERROR)
-        # if op == 0xFC: self.__set(ERROR)
+        if op == 0xEC: self.__set("ERROR", 0xEC)
+        if op == 0xFC: self.__set("ERROR", 0xFC)
 
         if op == 0xCD: self.__set(CALL, self.__getUInt16())
-        # if op == 0xDD: self.__set(ERROR)
-        # if op == 0xED: self.__set(ERROR)
-        # if op == 0xFD: self.__set(ERROR)
+        if op == 0xDD: self.__set("ERROR", 0xDD)
+        if op == 0xED: self.__set("ERROR", 0xED)
+        if op == 0xFD: self.__set("ERROR", 0xFD)
 
         if op == 0xCE: self.__set(ADC, A, self.__getUInt8())
         if op == 0xDE: self.__set(SBC, A, self.__getUInt8())
