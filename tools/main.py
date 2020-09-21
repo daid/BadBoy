@@ -213,7 +213,7 @@ rom.gb: src/main.o
 \trgbfix --validate $@
 
 src/main.o: $(ASM_FILES)
-\trgbasm --export-all -o $@ src/main.asm
+\trgbasm --export-all -o $@ src/main.asm -Wall -Wextra
 
 check: rom.gb rom.md5
 \tmd5sum -c rom.md5
