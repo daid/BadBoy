@@ -61,6 +61,9 @@ class IOMemory(Memory):
         IOReg(self, 0xFF6B, "rOBPD")
         IOReg(self, 0xFF70, "rSVBK")
 
+    def addAutoLabel(self, addr, source, type):
+        pass
+
 
 class IERegMemory(Memory):
     def __init__(self):

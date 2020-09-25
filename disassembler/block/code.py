@@ -1,9 +1,10 @@
 from .base import Block
 from instruction import *
-from romInfo import RomMemoryMapping
+from romInfo import RomInfo
 
 CART_CONTROL_REGS = {
     0x0000: "MBCSRamEnable",
+    0x2000: "$2000",
     0x2100: "MBCBankSelect",
 }
 
@@ -31,7 +32,15 @@ class CodeBlock(Block):
                 if memory[target] == None:
                     CodeBlock(memory, target)
                 memory[target].addAutoLabel(target, address, instr.type)
-                
+            elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int):
+                mem = RomInfo.memoryAt(instr.p0.target, memory)
+                if mem:
+                    mem.addAutoLabel(instr.p0.target, address, "data")
+            elif isinstance(instr.p1, Ref) and isinstance(instr.p1.target, int):
+                mem = RomInfo.memoryAt(instr.p1.target, memory)
+                if mem:
+                    mem.addAutoLabel(instr.p1.target, address, "data")
+            
             if not instr.hasNext():
                 break
 
@@ -70,7 +79,7 @@ class CodeBlock(Block):
             file.asmLine(instr.size, instr.type)
 
     def formatAsAddressOrLabel(self, addr):
-        label = RomMemoryMapping._instance.getLabelAt(addr, self.memory)
+        label = RomInfo.getLabelAt(addr, self.memory)
         if label:
             return label
         return "$%04x" % (addr)

@@ -1,17 +1,35 @@
 import os
+from memory.rom import RomMemory
+from memory.ram import WRamMemory
 
 
 class AssemblyFile:
-    def __init__(self, filename, memory):
+    def __init__(self, filename, memory=None):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         self.__file = open(filename, "wt")
-        self.__file.write(";; Disassembled with BadBoy Disassembler: https://github.com/daid/BadBoy\n\n")
+        self.__file.write(";; Disassembled with BadBoy Disassembler: https://github.com/daid/BadBoy\n")
+        self.__file.write("\n")
         self.__file.write("INCLUDE \"include/hardware.inc\"\n")
         self.__file.write("INCLUDE \"include/macros.inc\"\n")
-        if memory.bankNumber == 0:
-            self.__file.write("SECTION \"bank00\", ROM0[$0000]\n")
+        self.addr = None
+        self.__memory = None
+        self.__addr_prefix = None
+        
+        if memory:
+            self.start(memory)
+    
+    def start(self, memory):
+        self.__file.write("\n")
+        if isinstance(memory, RomMemory):
+            if memory.bankNumber == 0:
+                self.__file.write("SECTION \"bank00\", ROM0[$0000]\n")
+            else:
+                self.__file.write("SECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (memory.bankNumber, memory.bankNumber))
+            self.__addr_prefix = "%02x:" % (memory.bankNumber)
         else:
-            self.__file.write("SECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (memory.bankNumber, memory.bankNumber))
+            self.__file.write("SECTION \"%s\", %s[$%04x]\n" % (memory.type.lower(), memory.type.upper(), memory.base_address))
+            self.__addr_prefix = ""
+
         self.addr = memory.base_address
         self.__memory = memory
     
@@ -28,7 +46,7 @@ class AssemblyFile:
     
         if args:
             code = "%-4s %s" % (code, ", ".join(args))
-        self.__file.write("    %-50s ;; %02x:%04x" % (code, self.__memory.bankNumber, self.addr))
+        self.__file.write("    %-50s ;; %s%04x" % (code, self.__addr_prefix, self.addr))
         if is_data:
             pass
             #output.write(" ")

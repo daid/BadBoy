@@ -12,13 +12,13 @@ clean:
 
 $(ROM): $(patsubst src/%.asm,.obj/%.o,$(SRCS))
 	@mkdir -p $(@D)
-	rgblink -m $(basename $@).map -n $(basename $@).sym -o $@ $^
+	rgblink -w -m $(basename $@).map -n $(basename $@).sym -o $@ $^
 	rgbfix --validate $(FIXFLAGS) $@
 
 
 .obj/%.o $(DEPDIR)/%.mk: src/%.asm
 	@mkdir -p $(dir .obj/$* .dep/$*)
-	rgbasm -Wall -Wextra -isrc -M .dep/$*.mk -MP -MQ .obj/$*.o -MQ .dep/$*.mk -o .obj/$*.o $<
+	rgbasm -Wall -Wextra --export-all -isrc -M .dep/$*.mk -MP -MQ .obj/$*.o -MQ .dep/$*.mk -o .obj/$*.o $<
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(patsubst src/%.asm,.dep/%.mk,$(SRCS))
