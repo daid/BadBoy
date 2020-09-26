@@ -15,4 +15,6 @@ if __name__ == "__main__":
 
     rom = ROM(args.rom)
     disassembler = Disassembler(rom)
+    disassembler.readSources(args.output)
+    disassembler.processRom()
     disassembler.export(args.output)

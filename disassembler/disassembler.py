@@ -5,6 +5,7 @@ from romInfo import RomInfo
 from assemblyFile import AssemblyFile
 from block.header import ROMHeader
 from block.code import CodeBlock
+from sourceReader import SourceReader
 
 
 class Disassembler:
@@ -12,6 +13,14 @@ class Disassembler:
         self.__rom = rom
         RomInfo.init(rom)
 
+    def readSources(self, path):
+        for filename in os.listdir(os.path.join(path, "src")):
+            if not filename.endswith(".asm"):
+                continue
+            
+            SourceReader(path).readFile(os.path.join("src", filename))
+
+    def processRom(self):
         ROMHeader(RomInfo.romBank(0))
         CodeBlock(RomInfo.romBank(0), 0x0100).addLabel(0x0100, "entry")
         

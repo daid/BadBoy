@@ -34,18 +34,28 @@ class AssemblyFile:
         self.__memory = memory
     
     def label(self, label):
-        label = str(label)
-        if not label.startswith("."):
-            self.__file.write("\n")
         self.__file.write("%s:\n" % (label))
     
     def asmLine(self, size, code, *args, is_data=False):
-        label = self.__memory.getLabel(self.addr)
-        if label:
-            self.label(label)
-    
         if args:
             code = "%-4s %s" % (code, ", ".join(args))
+
+        label = self.__memory.getLabel(self.addr)
+        if label:
+            label = str(label)
+            if not label.startswith("."):
+                self.__file.write("\n")
+        comments = self.__memory.getComments(self.addr)
+        if comments:
+            for comment in comments:
+                self.__file.write(";%s\n" % (comment))
+        if label:
+            self.label(label)
+
+        inline_comment = self.__memory.getInlineComment(self.addr)
+        if inline_comment:
+            code = "%s ;%s" % (code, inline_comment)
+
         self.__file.write("    %-50s ;; %s%04x" % (code, self.__addr_prefix, self.addr))
         if is_data:
             pass

@@ -5,6 +5,8 @@ class Memory:
     def __init__(self, type, size, *, base_address=0):
         self.__blocks = [None] * size
         self.__labels = {}
+        self.__comments = {}
+        self.__inline_comment = {}
         self.base_address = base_address
         self.type = type
 
@@ -36,3 +38,17 @@ class Memory:
 
     def getLabel(self, addr):
         return self.__labels.get(addr, None)
+
+    def addComment(self, addr, comment):
+        if addr not in self.__comments:
+            self.__comments[addr] = []
+        self.__comments[addr].append(comment)
+
+    def getComments(self, addr):
+        return self.__comments.get(addr, None)
+
+    def addInlineComment(self, addr, comment):
+        self.__inline_comment[addr] = comment
+
+    def getInlineComment(self, addr):
+        return self.__inline_comment.get(addr, None)
