@@ -53,9 +53,9 @@ class SourceReader:
             self.__comments.append(comment)
 
     def __gotLabel(self, label):
-        if label.startswith("call_") or label.startswith("jp_") or label.startswith("jr_") or label.startswith("rst_"):
+        if label.startswith("call_") or label.startswith("jp_") or label.startswith("jr_") or label.startswith("rst_") or label.startswith("data_"):
             return
-        if label.startswith(".call_") or label.startswith(".jp_") or label.startswith(".jr_") or label.startswith(".rst_"):
+        if label.startswith(".call_") or label.startswith(".jp_") or label.startswith(".jr_") or label.startswith(".rst_") or label.startswith(".data_"):
             return
         if re.match(r"^[hw][0-9A-F]{4}$", label):
             return

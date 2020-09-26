@@ -14,10 +14,11 @@ def callAnnotation(memory, addr, comment):
     else:
         handler_name, params = comment, ""
 
-    for param in re.finditer("(\w+)=([^=]+)", params):
+    for param in re.finditer("(\w+)=([^ ]+)", params):
         kwargs[param[1]] = param[2]
     
     handler = ALL_ANNOTATIONS.get(handler_name)
     if not handler:
         raise NotImplementedError("Encountered annotation: [@%s] but no implementation is found" % (comment))
+    print(kwargs)
     handler(memory, addr, **kwargs)

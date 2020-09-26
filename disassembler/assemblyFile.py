@@ -54,7 +54,7 @@ class AssemblyFile:
 
         inline_comment = self.__memory.getInlineComment(self.addr)
         if inline_comment:
-            code = "%s ;%s" % (code, inline_comment)
+            code = "%s ;%s" % (code,inline_comment)
 
         self.__file.write("    %-50s ;; %s%04x" % (code, self.__addr_prefix, self.addr))
         if is_data:

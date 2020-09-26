@@ -20,6 +20,13 @@ class RomInfo:
         self.__oam = OAMMemory()
         self.__io = IOMemory()
         self.__ie = IERegMemory()
+        self.macros = {
+            "ld_long_load": "db $FA\ndw \\1",
+            "ld_long_store": "db $EA\ndw \\1",
+            "short_halt": "db $76",
+            "short_stop": "db $10",
+        }
+
 
     @classmethod
     def romBank(self, index):

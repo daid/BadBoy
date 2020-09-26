@@ -53,14 +53,8 @@ class Disassembler:
         self.__exportRam(f, RomInfo.getWRam())
         self.__exportRam(f, RomInfo.getHRam())
         
-        macros = {
-            "ld_long_load": "db $FA\ndw \\1",
-            "ld_long_store": "db $EA\ndw \\1",
-            "short_halt": "db $76",
-            "short_stop": "db $10",
-        }
         macro_file = open(os.path.join(path, "src", "include", "macros.inc"), "wt")
-        for macro, contents in sorted(macros.items()):
+        for macro, contents in sorted(RomInfo.macros.items()):
             macro_file.write("%s: MACRO\n" % (macro))
             for line in contents.rstrip().split("\n"):
                 macro_file.write("    %s\n" % (line.rstrip()))
