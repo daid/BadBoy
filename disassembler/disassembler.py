@@ -16,11 +16,12 @@ class Disassembler:
         RomInfo.init(rom)
 
     def readSources(self, path):
-        for filename in os.listdir(os.path.join(path, "src")):
-            if not filename.endswith(".asm"):
-                continue
-            
-            SourceReader(path).readFile(os.path.join("src", filename))
+        if os.path.exists(os.path.join(path, "src")):
+            for filename in os.listdir(os.path.join(path, "src")):
+                if not filename.endswith(".asm"):
+                    continue
+                
+                SourceReader(path).readFile(os.path.join("src", filename))
 
     def processRom(self):
         for bank in RomInfo.getRomBanks():
