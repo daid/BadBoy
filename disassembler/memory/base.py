@@ -39,6 +39,9 @@ class Memory:
     def getLabel(self, addr):
         return self.__labels.get(addr, None)
 
+    def getAllLabels(self):
+        return self.__labels.items()
+
     def addComment(self, addr, comment):
         if addr not in self.__comments:
             self.__comments[addr] = []
@@ -46,6 +49,9 @@ class Memory:
 
     def getComments(self, addr):
         return self.__comments.get(addr, None)
+
+    def getAllComments(self):
+        return self.__comments.items()
 
     def addInlineComment(self, addr, comment):
         self.__inline_comment[addr] = comment

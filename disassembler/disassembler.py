@@ -6,6 +6,8 @@ from assemblyFile import AssemblyFile
 from block.header import ROMHeader
 from block.code import CodeBlock
 from sourceReader import SourceReader
+from annotation.annotation import callAnnotation
+from autoLabel import AutoLabelLocalizer
 
 
 class Disassembler:
@@ -21,6 +23,12 @@ class Disassembler:
             SourceReader(path).readFile(os.path.join("src", filename))
 
     def processRom(self):
+        for bank in RomInfo.getRomBanks():
+            for addr, comments in bank.getAllComments():
+                for comment in comments:
+                    if comment.startswith("@"):
+                        callAnnotation(bank, addr, comment[1:])
+
         ROMHeader(RomInfo.romBank(0))
         CodeBlock(RomInfo.romBank(0), 0x0100).addLabel(0x0100, "entry")
         
@@ -29,6 +37,9 @@ class Disassembler:
                 CodeBlock(RomInfo.romBank(0), addr).addLabel(addr, name)
 
     def export(self, path):
+        for bank in RomInfo.getRomBanks():
+            AutoLabelLocalizer(bank)
+
         if not os.path.exists(path):
             shutil.copytree(os.path.join(os.path.dirname(__file__), "template"), path)
             open(os.path.join(path, "rom.gb.md5"), "wt").write("%s rom.gb\n" % (self.__rom.md5sum()))

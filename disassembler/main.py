@@ -2,7 +2,7 @@ import argparse
 
 from rom import ROM
 from disassembler import Disassembler
-
+from annotation import simple
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -15,6 +15,6 @@ if __name__ == "__main__":
 
     rom = ROM(args.rom)
     disassembler = Disassembler(rom)
-    disassembler.readSources(args.output)
+    disassembler.readSources(args.source if args.source else args.output)
     disassembler.processRom()
     disassembler.export(args.output)

@@ -10,6 +10,7 @@ class SourceReader:
         self.__memory = None
         self.__comments = []
         self.__inline_comment = None
+        self.__label = None
 
     def readFile(self, filename):
         f = open(os.path.join(self.__base_path, filename), "rt")
@@ -20,7 +21,11 @@ class SourceReader:
                 self.__gotComment(line[line.find(";")+1:].rstrip())
             if ";;" in line:
                 self.__gotAddressInfo(line[line.find(";;")+2:].strip())
-    
+            if ";" in line:
+                line = line[:line.find(";")]
+            if line.rstrip().endswith(":"):
+                self.__gotLabel(line.rstrip()[:-1])
+
     def __setMemoryTypeFromSection(self, line):
         section_type = line.strip().split(",")[1].strip().upper()
         if "[" in section_type:
@@ -46,6 +51,15 @@ class SourceReader:
             self.__inline_comment = comment
         else:
             self.__comments.append(comment)
+
+    def __gotLabel(self, label):
+        if label.startswith("call_") or label.startswith("jp_") or label.startswith("jr_") or label.startswith("rst_"):
+            return
+        if label.startswith(".call_") or label.startswith(".jp_") or label.startswith(".jr_") or label.startswith(".rst_"):
+            return
+        if re.match(r"^[hw][0-9A-F]{4}$", label):
+            return
+        self.__label = label
     
     def __gotAddressInfo(self, info):
         m = re.match(r"[0-9a-fA-F]{2}:([0-9a-fA-F]{4})", info)
@@ -59,5 +73,8 @@ class SourceReader:
             self.__memory.addComment(addr, comment)
         if self.__inline_comment is not None:
             self.__memory.addInlineComment(addr, self.__inline_comment)
+        if self.__label is not None:
+            self.__memory.addLabel(addr, self.__label)
         self.__comments = []
         self.__inline_comment = None
+        self.__label = None
