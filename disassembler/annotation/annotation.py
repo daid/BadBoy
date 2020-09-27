@@ -20,5 +20,4 @@ def callAnnotation(memory, addr, comment):
     handler = ALL_ANNOTATIONS.get(handler_name)
     if not handler:
         raise NotImplementedError("Encountered annotation: [@%s] but no implementation is found" % (comment))
-    print(kwargs)
     handler(memory, addr, **kwargs)

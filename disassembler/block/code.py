@@ -29,9 +29,16 @@ class CodeBlock(Block):
             
             target = instr.jumpTarget()
             if target != None and target < 0x8000:
-                if memory[target] == None:
-                    CodeBlock(memory, target)
-                memory[target].addAutoLabel(target, address, instr.type)
+                other_memory = RomInfo.memoryAt(target, memory)
+                other_block = other_memory[target]
+                if other_block == None:
+                    other_block = CodeBlock(other_memory, target)
+                elif isinstance(other_block, CodeBlock):
+                    if instr.type in (CALL, RST):
+                        other_block.onCall(other_memory, address - instr.size, address)
+                    else:
+                        other_block.onJump(other_memory, address - instr.size, address)
+                other_block.addAutoLabel(target, address, instr.type)
             elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int):
                 mem = RomInfo.memoryAt(instr.p0.target, memory)
                 if mem:
@@ -88,3 +95,9 @@ class CodeBlock(Block):
         if number < 0x1000 or number == 0xFF00:
             return "$%02x" % (number)
         return self.formatAsAddressOrLabel(number)
+
+    def onCall(self, from_memory, from_addr, next_addr):
+        pass
+
+    def onJump(self, from_memory, from_addr, next_addr):
+        pass

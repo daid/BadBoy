@@ -3,6 +3,8 @@ import argparse
 from rom import ROM
 from disassembler import Disassembler
 from annotation import simple
+from annotation import sdcc
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
