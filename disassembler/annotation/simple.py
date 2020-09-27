@@ -9,7 +9,11 @@ def code(memory, addr):
 
 @annotation
 def data(memory, addr, *, format, amount=1):
-    DataBlock(memory, addr, format=format, amount=int(amount));
+    DataBlock(memory, addr, format=format, amount=int(amount) if amount is not None else None);
+
+@annotation
+def jumptable(memory, addr, *, amount=None):
+    JumpTable(memory, addr, amount=int(amount))
 
 
 class DataBlock(Block):
@@ -61,3 +65,25 @@ class DataBlock(Block):
                     params.append(label)
                     size += 2
             file.asmLine(size, "data_%s" % (self.__format), *params, is_data=True)
+
+
+class JumpTable(Block):
+    def __init__(self, memory, addr, *, amount=None):
+        super().__init__(memory, addr)
+        
+        for n in range(amount if amount is not None else 0x2000):
+            target = memory.word(addr + len(self))
+            if target >= memory.base_address and target < memory.base_address + len(memory):
+                CodeBlock(memory, target)
+                memory.addAutoLabel(target, addr, "call")
+            if not self.resize(len(self) + 2, allow_fail=amount is None):
+                break            
+
+    def export(self, file):
+        for n in range(len(self) // 2):
+            label = self.memory.getLabel(self.memory.word(file.addr + size))
+            if label:
+                label = str(label)
+            else:
+                label = "$%04x" % self.memory.word(file.addr + size)
+            file.asmLine(2, "dw", label, is_data=True)

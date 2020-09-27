@@ -13,6 +13,7 @@ class SourceReader:
         self.__label = None
 
     def readFile(self, filename):
+        print(filename)
         f = open(os.path.join(self.__base_path, filename), "rt")
         for line in f:
             if line.startswith("SECTION"):
