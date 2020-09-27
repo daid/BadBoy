@@ -265,7 +265,8 @@ all: rom.gb
         elif self.info.hasMark(addr, self.info.MARK_WORD_LOW) and self.info.hasMark(addr + 1, self.info.MARK_WORD_HIGH):
             return self.__formatWord
         elif self.info.classifyDataAsChar(addr) == "G" and self.info.classifyDataAsChar(addr + 1) == "G":
-            if (self.info.rom[addr] & 1) == 0 and (self.info.rom[addr + 1] & 1) == 1:
+            #if (self.info.rom[addr] & 1) == 0 and (self.info.rom[addr + 1] & 1) == 1:
+            if (addr + 1) not in self.info.rom_symbols:
                 return self.__formatGraphics2bpp
             return self.__formatGraphics1bpp
         return self.__formatRawData
@@ -293,7 +294,7 @@ all: rom.gb
             if a & (0x80 >> n):
                 p |= 1
             gfx += "%d" % p
-        self.formatLine(output, addr, 2, "db   %%%s" % gfx)
+        self.formatLine(output, addr, 1, "db   %%%s" % gfx)
         return addr + 1
 
     def __formatGraphics2bpp(self, output, addr):

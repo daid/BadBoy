@@ -340,7 +340,7 @@ class Instrumentation:
             if not data:
                 break
             source, used_as = struct.unpack("<QQ", data)
-            if (source & self.ID_MASK) == self.ID_ROM:
+            if (source & self.ID_MASK) == self.ID_ROM and source & 0xFFFFFFFF < len(self.rom):
                 self.rom[source & 0xFFFFFFFF] = used_as
 
     def loadSymbolFile(self, filename):

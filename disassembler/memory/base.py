@@ -58,3 +58,13 @@ class Memory:
 
     def getInlineComment(self, addr):
         return self.__inline_comment.get(addr, None)
+
+    def mark(self, addr, mark):
+        if addr not in self.__marks:
+            self.__marks[addr] = set()
+        self.__marks[addr].add(mark)
+
+    def hasMark(self, addr, mark):
+        if addr not in self.__marks:
+            return False
+        return mark in self.__marks[addr]

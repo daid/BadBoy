@@ -24,10 +24,25 @@ public:
             card.mbc->writeRom((id & 0x3fff) | 0x4000, value);
     }
 };
+class Mem8SRam : public Mem8Ram
+{
+public:
+    uint8_t get() const override
+    {
+        printf("SRAM<%04x\n", uint32_t(id & 0xFFFF));
+        return Mem8Ram::get();
+    }
+    
+    void setImpl(uint8_t value) override
+    {
+        printf("SRAM>%04x = %02x\n", uint32_t(id & 0xFFFF), value);
+        Mem8Ram::setImpl(value);
+    }
+};
 
 static Mem8Block<Mem8Rom> bootrom;
 static Mem8Block<Mem8Rom> rom;
-static Mem8Block<Mem8Ram> sram;
+static Mem8Block<Mem8SRam> sram;
 
 
 void Card::init()
@@ -142,6 +157,8 @@ bool Card::load(const char* filename)
         break;
     }
     printf("Card type: %02x: %s\n", rom[0x147].value, typeid(*mbc.get()).name());
+    printf("ROM Size: %dKB (%02x)\n", 32 << rom[0x148].value, rom[0x148].value);
+    printf("SRAM Size: %dKB (%02x)\n", sram.size(), rom[0x149].value);
 
     fclose(f);
     return true;
