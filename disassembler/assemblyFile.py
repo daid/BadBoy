@@ -32,10 +32,13 @@ class AssemblyFile:
 
         self.addr = memory.base_address
         self.__memory = memory
+
+    def newline(self):
+        self.__file.write("\n")
     
     def label(self, label):
         self.__file.write("%s:\n" % (label))
-    
+
     def asmLine(self, size, code, *args, is_data=False):
         if args:
             code = "%-4s %s" % (code, ", ".join(args))

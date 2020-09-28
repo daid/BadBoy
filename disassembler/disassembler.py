@@ -5,6 +5,7 @@ from romInfo import RomInfo
 from assemblyFile import AssemblyFile
 from block.header import ROMHeader
 from block.code import CodeBlock
+from block.gfx import GfxBlock
 from sourceReader import SourceReader
 from annotation.annotation import callAnnotation
 from autoLabel import AutoLabelLocalizer
@@ -24,6 +25,7 @@ class Disassembler:
                 SourceReader(path).readFile(os.path.join("src", filename))
 
     def processRom(self):
+        # First process all the annotations
         for bank in RomInfo.getRomBanks():
             for addr, comments in bank.getAllComments():
                 for comment in comments:
@@ -33,6 +35,7 @@ class Disassembler:
                 if comment.startswith("@"):
                     callAnnotation(bank, addr, comment[1:])
 
+        # Next process our normal entry point, header info and interrupts.
         ROMHeader(RomInfo.romBank(0))
         if RomInfo.romBank(0)[0x0100] is None:
             CodeBlock(RomInfo.romBank(0), 0x0100).addLabel(0x0100, "entry")
@@ -40,6 +43,23 @@ class Disassembler:
         for addr, name in [(0x0040, "isrVBlank"), (0x0048, "isrLCDC"), (0x0050, "isrTimer"), (0x0058, "isrSerial"), (0x0060, "isrJoypad")]:
             if RomInfo.memoryAt(addr).byte(addr) not in (0x00, 0xff) and RomInfo.memoryAt(addr)[addr] == None:
                 CodeBlock(RomInfo.romBank(0), addr).addLabel(addr, name)
+
+        # Finally, for any data that has no blocks on it, see if we have marks from instrumentation that can decode it
+        for bank in RomInfo.getRomBanks():
+            for addr in range(bank.base_address, bank.base_address + len(bank)):
+                if not bank[addr]:
+                    if bank.hasMark(addr, "CODE"):
+                        CodeBlock(bank, addr)
+                    elif bank.hasMark(addr, "GFX_LOW") and bank.hasMark(addr + 1, "GFX_HIGH"):
+                        size = 2
+                        while size < 16 and bank.hasMark(addr + size, "GFX_LOW") and bank.hasMark(addr + size + 1, "GFX_HIGH"):
+                            size += 2
+                        GfxBlock(bank, addr, bpp=2, size=size)
+                    elif bank.hasMark(addr, "GFX_HIGH"):
+                        size = 1
+                        while size < 8 and bank.hasMark(addr + size, "GFX_HIGH"):
+                            size += 1
+                        GfxBlock(bank, addr, bpp=1, size=size)
 
     def export(self, path):
         for bank in RomInfo.getRomBanks():

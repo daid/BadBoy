@@ -27,7 +27,9 @@ class SdccFarrcallInfoBlock(Block):
             target_memory = RomInfo.memoryAt(self.__target_address, RomInfo.romBank(self.__bank))
         except IndexError:
             return
-        target_block = CodeBlock(target_memory, self.__target_address)
+        target_block = target_memory[self.__target_address]
+        if target_block is None:
+            target_block = CodeBlock(target_memory, self.__target_address)
         target_block.addAutoLabel(self.__target_address, address, "call")
 
     def export(self, file):

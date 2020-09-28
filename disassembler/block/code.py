@@ -46,7 +46,7 @@ class CodeBlock(Block):
                         else:
                             other_block.onJump(other_memory, address - instr.size, address)
                     other_block.addAutoLabel(target, address, instr.type)
-            elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int):
+            elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int) and instr.p0.target >= 0x8000:
                 mem = RomInfo.memoryAt(instr.p0.target, memory)
                 if mem:
                     mem.addAutoLabel(instr.p0.target, address, "data")
@@ -58,6 +58,8 @@ class CodeBlock(Block):
                 if 0x4000 <= instr.p1 < 0x8000 and memory.bankNumber > 0: # Banked ROM
                     RomInfo.memoryAt(instr.p1, memory).addAutoLabel(instr.p1, address, "data")
                 elif 0xC000 <= instr.p1 < 0xE000: # WRAM
+                    RomInfo.memoryAt(instr.p1).addAutoLabel(instr.p1, address, "data")
+                elif 0xFF80 <= instr.p1 < 0xFFFF: # HRAM
                     RomInfo.memoryAt(instr.p1).addAutoLabel(instr.p1, address, "data")
             if not instr.hasNext():
                 break

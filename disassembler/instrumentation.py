@@ -1,3 +1,5 @@
+import struct
+
 from romInfo import RomInfo
 
 
@@ -27,7 +29,7 @@ def processInstrumentation(filename):
         if not data:
             break
         source, used_as = struct.unpack("<QQ", data)
-        if (source & self.ID_MASK) == self.ID_ROM:
+        if (source & ID_MASK) == ID_ROM:
             addr = source & 0x3FFF
             bank = (source >> 14) & 0x3FF
             if bank > 0:
@@ -64,5 +66,5 @@ def processInstrumentation(filename):
             if used_as & MARK_WORD_HIGH:
                 memory.mark(addr, "WORD_HIGH")
 
-            if bank == 0 and (used_as & MARK_BANK_MASK) != 0:
+            if bank == 0 and (used_as & MARK_BANK_MASK) != 0 and (used_as & MARK_BANK_MASK) >> MARK_BANK_SHIFT:
                 memory.setActiveRomBankAt(addr, (used_as & MARK_BANK_MASK) >> MARK_BANK_SHIFT)

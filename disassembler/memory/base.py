@@ -7,6 +7,7 @@ class Memory:
         self.__labels = {}
         self.__comments = {}
         self.__inline_comment = {}
+        self.__marks = {}
         self.base_address = base_address
         self.type = type
 
