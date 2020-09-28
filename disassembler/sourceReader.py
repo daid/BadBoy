@@ -21,7 +21,7 @@ class SourceReader:
             if ";" in line:
                 self.__gotComment(line[line.find(";")+1:].rstrip())
             if ";;" in line:
-                self.__gotAddressInfo(line[line.find(";;")+2:].strip())
+                self.__gotAddressInfo(line[line.rfind(";;")+2:].strip())
             if ";" in line:
                 line = line[:line.find(";")]
             if line.rstrip().endswith(":"):

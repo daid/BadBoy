@@ -1,7 +1,9 @@
 from annotation.annotation import annotation
 from block.base import Block
 from block.code import CodeBlock
+from block.gfx import GfxBlock
 from romInfo import RomInfo
+
 
 @annotation
 def code(memory, addr):
@@ -12,8 +14,8 @@ def data(memory, addr, *, format, amount=1):
     DataBlock(memory, addr, format=format, amount=int(amount) if amount is not None else None);
 
 @annotation
-def jumptable(memory, addr, *, amount=None):
-    JumpTable(memory, addr, amount=int(amount))
+def jumptable(memory, addr, *, amount=None, label=None):
+    JumpTable(memory, addr, amount=int(amount) if amount is not None else None)
 
 @annotation
 def bank(memory, addr, bank_nr):
@@ -22,6 +24,11 @@ def bank(memory, addr, bank_nr):
 @annotation
 def string(memory, addr, *, size=None):
     StringBlock(memory, addr, size=int(size) if size is not None else None)
+
+@annotation
+def gfx(memory, addr):
+    GfxBlock(memory, addr, bpp=2, size=8)
+
 
 class DataBlock(Block):
     def __init__(self, memory, addr, *, format, amount):
@@ -32,9 +39,10 @@ class DataBlock(Block):
         macro = []
         for idx, f in enumerate(format.lower()):
             if f == "b":
-                macro.append("db \%d" % (idx + 1))
-            if f in ("w", "p"):
-                macro.append("dw \%d" % (idx + 1))
+                macro.append("db \\1")
+            elif f in ("w", "p"):
+                macro.append("dw \\1")
+            macro.append("shift")
         RomInfo.macros["data_%s" % (format)] = "\n".join(macro)
 
 
@@ -84,15 +92,15 @@ class JumpTable(Block):
                 CodeBlock(memory, target)
                 memory.addAutoLabel(target, addr, "call")
             if not self.resize(len(self) + 2, allow_fail=amount is None):
-                break            
+                break
 
     def export(self, file):
         for n in range(len(self) // 2):
-            label = self.memory.getLabel(self.memory.word(file.addr + size))
+            label = self.memory.getLabel(self.memory.word(file.addr))
             if label:
                 label = str(label)
             else:
-                label = "$%04x" % self.memory.word(file.addr + size)
+                label = "$%04x" % self.memory.word(file.addr)
             file.asmLine(2, "dw", label, is_data=True)
 
 

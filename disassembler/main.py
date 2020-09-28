@@ -13,7 +13,11 @@ if __name__ == "__main__":
     parser.add_argument("--instrumentation", action='append', default=[])
     parser.add_argument("--source")
     parser.add_argument("--output", type=str, required=True)
+    parser.add_argument("--plugin", action='append', default=[])
     args = parser.parse_args()
+
+    for plugin in args.plugin:
+        exec(open(plugin, "rt").read())
 
     rom = ROM(args.rom)
     disassembler = Disassembler(rom)

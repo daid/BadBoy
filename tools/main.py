@@ -226,15 +226,17 @@ all: rom.gb
 """)
         open(os.path.join(path, "rom.md5"), "wt").write("%s rom.gb\n" % (self.rom.md5sum()))
         for bank in range(len(self.rom.data) // 0x4000):
-            if bank == 0:
-                main.write("\nSECTION \"bank00\", ROM0[$0000]\n")
-            else:
-                main.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
             main.write("include \"src/bank%02X.asm\"\n" % (bank))
             self._writeBank(bank, open(os.path.join(path, "src", "bank%02X.asm" % (bank)), "wt"))
 
     def _writeBank(self, bank, output):
         output.write(";; Disassembled with BadBoy Disassembler: https://github.com/daid/BadBoy\n")
+
+        if bank == 0:
+            output.write("\nSECTION \"bank00\", ROM0[$0000]\n")
+        else:
+            output.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
+
         addr = 0x4000 * bank
         end_of_bank = addr + 0x4000
         while end_of_bank > addr and self.rom.data[end_of_bank-1] == 0x00:

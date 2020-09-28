@@ -72,7 +72,7 @@ class Disassembler:
         objfiles = []
         for bank in RomInfo.getRomBanks():
             print("Processing bank: %d" % (bank.bankNumber))
-            self.__exportRomBank(AssemblyFile(os.path.join(path, "src", "bank%02x.asm" % (bank.bankNumber)), bank), bank)
+            self.__exportRomBank(AssemblyFile(os.path.join(path, "src", "bank%02X.asm" % (bank.bankNumber)), bank), bank)
         
         f = AssemblyFile(os.path.join(path, "src", "memory.asm"))
         self.__exportRam(f, RomInfo.getWRam())
