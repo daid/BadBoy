@@ -9,15 +9,20 @@ def annotation(handler):
 
 def callAnnotation(memory, addr, comment):
     kwargs = {}
+    args = []
     if " " in comment:
         handler_name, params = comment.split(" ", 1)
     else:
         handler_name, params = comment, ""
 
-    for param in re.finditer("(\w+)=([^ ]+)", params):
-        kwargs[param[1]] = param[2]
+    for param in params.split(" "):
+        if "=" in param:
+            param = param.split("=", 1)
+            kwargs[param[1]] = param[2]
+        elif param != "":
+            args.append(param)
     
     handler = ALL_ANNOTATIONS.get(handler_name)
     if not handler:
         raise NotImplementedError("Encountered annotation: [@%s] but no implementation is found" % (comment))
-    handler(memory, addr, **kwargs)
+    handler(memory, addr, *args, **kwargs)

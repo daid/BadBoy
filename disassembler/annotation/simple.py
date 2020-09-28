@@ -15,6 +15,10 @@ def data(memory, addr, *, format, amount=1):
 def jumptable(memory, addr, *, amount=None):
     JumpTable(memory, addr, amount=int(amount))
 
+@annotation
+def bank(memory, addr, bank_nr):
+    memory.setActiveRomBankAt(addr, int(bank_nr))
+
 
 class DataBlock(Block):
     def __init__(self, memory, addr, *, format, amount):

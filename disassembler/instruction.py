@@ -477,12 +477,7 @@ class Instruction:
         if self.p0 == HL:
             return None
 
-        address = self.p0
-
-        if address >= 0x4000 and address < 0x8000 and self.address < 0x4000: # Call from bank 0 towards other banks
-            print("Call from 00:%04x to $%04x, without knowning active bank" % (self.address, address))
-            return None
-        return address
+        return self.p0
 
     def __repr__(self):
         return "<%04x:%s %s %s %s>" % (self.address, self.type, self.condition, self.p0, self.p1)

@@ -59,6 +59,9 @@ class Memory:
     def getInlineComment(self, addr):
         return self.__inline_comment.get(addr, None)
 
+    def getAllInlineComments(self):
+        return self.__inline_comment.items()
+
     def mark(self, addr, mark):
         if addr not in self.__marks:
             self.__marks[addr] = set()

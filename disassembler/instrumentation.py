@@ -63,3 +63,6 @@ def processInstrumentation(filename):
                 memory.mark(addr, "WORD_LOW")
             if used_as & MARK_WORD_HIGH:
                 memory.mark(addr, "WORD_HIGH")
+
+            if bank == 0 and (used_as & MARK_BANK_MASK) != 0:
+                memory.setActiveRomBankAt(addr, (used_as & MARK_BANK_MASK) >> MARK_BANK_SHIFT)

@@ -29,10 +29,14 @@ class Disassembler:
                 for comment in comments:
                     if comment.startswith("@"):
                         callAnnotation(bank, addr, comment[1:])
+            for addr, comment in bank.getAllInlineComments():
+                if comment.startswith("@"):
+                    callAnnotation(bank, addr, comment[1:])
 
         ROMHeader(RomInfo.romBank(0))
-        CodeBlock(RomInfo.romBank(0), 0x0100).addLabel(0x0100, "entry")
-        
+        if RomInfo.romBank(0)[0x0100] is None:
+            CodeBlock(RomInfo.romBank(0), 0x0100).addLabel(0x0100, "entry")
+
         for addr, name in [(0x0040, "isrVBlank"), (0x0048, "isrLCDC"), (0x0050, "isrTimer"), (0x0058, "isrSerial"), (0x0060, "isrJoypad")]:
             if RomInfo.memoryAt(addr).byte(addr) not in (0x00, 0xff) and RomInfo.memoryAt(addr)[addr] == None:
                 CodeBlock(RomInfo.romBank(0), addr).addLabel(addr, name)
