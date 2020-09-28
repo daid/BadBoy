@@ -18,7 +18,7 @@ def callAnnotation(memory, addr, comment):
     for param in params.split(" "):
         if "=" in param:
             param = param.split("=", 1)
-            kwargs[param[1]] = param[2]
+            kwargs[param[0]] = param[1]
         elif param != "":
             args.append(param)
     

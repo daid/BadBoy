@@ -19,6 +19,9 @@ def jumptable(memory, addr, *, amount=None):
 def bank(memory, addr, bank_nr):
     memory.setActiveRomBankAt(addr, int(bank_nr))
 
+@annotation
+def string(memory, addr, *, size=None):
+    StringBlock(memory, addr, size=int(size) if size is not None else None)
 
 class DataBlock(Block):
     def __init__(self, memory, addr, *, format, amount):
@@ -91,3 +94,49 @@ class JumpTable(Block):
             else:
                 label = "$%04x" % self.memory.word(file.addr + size)
             file.asmLine(2, "dw", label, is_data=True)
+
+
+class StringBlock(Block):
+    MAPPING = {
+        0x09: r"\t",
+        0x0A: r"\n",
+        0x0D: r"\r",
+        0x22: r"\"",
+        0x5C: "\\",
+        0x7B: r"\{",
+        0x7D: r"\}",
+    }
+
+    def __init__(self, memory, addr, *, size=None):
+        super().__init__(memory, addr)
+        
+        if size is None:
+            size = 0
+            while memory.byte(addr + size) != 0:
+                size += 1
+            size += 1
+        self.resize(size)
+
+    def export(self, file):
+        s = ""
+        in_string = False
+        for n in range(len(self)):
+            value = self.memory.byte(file.addr + n)
+            if value in self.MAPPING:
+                if not in_string:
+                    s += "\""
+                    in_string = True
+                s += self.MAPPING[value]
+            elif 32 <= value < 128:
+                if not in_string:
+                    s += "\""
+                    in_string = True
+                s += "%c" % (value)
+            else:
+                if in_string:
+                    s += "\""
+                    in_string = False
+                s += ", $%02x" % (value)
+        if in_string:
+            s += "\""
+        file.asmLine(len(self), "db", s, is_data=True)

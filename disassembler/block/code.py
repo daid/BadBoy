@@ -82,7 +82,7 @@ class CodeBlock(Block):
         if isinstance(p1, Ref) and isinstance(p1.target, int):
             p1 = "[%s]" % (self.formatAsAddressOrLabel(p1.target))
 
-        if isinstance(p0, int):
+        if isinstance(p0, int) and instr.type not in (SET, RES, BIT):
             p0 = self.formatAsNumberOrLabel(p0)
         if isinstance(p1, int) and (instr.type != ADD or instr.p0 != SP):
             p1 = self.formatAsNumberOrLabel(p1)

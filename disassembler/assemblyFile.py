@@ -61,10 +61,12 @@ class AssemblyFile:
 
         self.__file.write("    %-50s ;; %s%04x" % (code, self.__addr_prefix, self.addr))
         if is_data:
-            pass
-            #output.write(" ")
-            #for n in range(size):
-            #    output.write(self.info.classifyDataAsChar(address+n))
+            self.__file.write(" ")
+            for n in range(size):
+                if self.__memory.hasMark(self.addr+n, "DATA"):
+                    self.__file.write(".")
+                else:
+                    self.__file.write("?")
         else:
             for n in range(size):
                 self.__file.write(" $%02x" % (self.__memory.byte(self.addr+n)))
