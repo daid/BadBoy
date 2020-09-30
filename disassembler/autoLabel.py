@@ -10,7 +10,10 @@ class AutoLabel:
  
     def addSource(self, address, type):
         self.source_types.add(type)
-        self.source_addresses.add(address)
+        if address is not None:
+            self.source_addresses.add(address)
+        else:
+            self.local = False
         
         if type == "call":
             self.local = False
@@ -77,5 +80,7 @@ class AutoLabelLocalizer:
     def __removeLocal(self, auto_label):
         auto_label.local = False
         if auto_label in self.__blocks_labels:
-            for label in self.__blocks_labels[auto_label]:
+            labels = self.__blocks_labels[auto_label]
+            del self.__blocks_labels[auto_label]
+            for label in labels:
                 self.__removeLocal(label)

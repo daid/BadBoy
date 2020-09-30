@@ -3,9 +3,9 @@ from instruction import *
 from romInfo import RomInfo
 
 CART_CONTROL_REGS = {
-    0x0000: "MBCSRamEnable",
+    0x0000: "$0000",
     0x2000: "$2000",
-    0x2100: "MBCBankSelect",
+    0x2100: "$2100",
 }
 
 
@@ -25,6 +25,9 @@ class CodeBlock(Block):
             if not self.resize(len(self) + instr.size, allow_fail=True):
                 print("Odd instruction overlap at: %02x:%04x" % (memory.bankNumber, address))
                 break
+
+            for n in range(1, instr.size):
+                memory.ensureNoLabel(address + n)
             address += instr.size
             
             target = instr.jumpTarget()
@@ -74,6 +77,14 @@ class CodeBlock(Block):
         if instr.type in (JP, JR, CALL, RST) and p0 != HL:
             p0 = self.formatAsAddressOrLabel(p0)
 
+        # Prevent the assembler from optimizing "LD [FFxx], A" and "LD A, [FFxx]" instructions.
+        if instr.type == LD and isinstance(p0, Ref) and isinstance(p0.target, int) and p0.target >= 0xFF00 and instr.p1 == A:
+            instr.type = "ld_long_store"
+            p0 = "%s" % (self.formatAsAddressOrLabel(p0.target))
+        elif instr.type == LD and isinstance(p1, Ref) and isinstance(p1.target, int) and p1.target >= 0xFF00 and instr.p0 == A:
+            instr.type = "ld_long_load"
+            p1 = "%s" % (self.formatAsAddressOrLabel(p1.target))
+
         if isinstance(p0, Ref) and isinstance(p0.target, int):
             if p0.target in CART_CONTROL_REGS:
                 p0 = "[%s]" % CART_CONTROL_REGS[p0.target]
@@ -86,7 +97,7 @@ class CodeBlock(Block):
             p0 = self.formatAsNumberOrLabel(p0)
         if isinstance(p1, int) and (instr.type != ADD or instr.p0 != SP):
             p1 = self.formatAsNumberOrLabel(p1)
-        
+
         if instr.condition != None and instr.p0 != None:
             file.asmLine(instr.size, instr.type, instr.condition, str(p0))
         elif instr.p0 != None and instr.p1 != None:

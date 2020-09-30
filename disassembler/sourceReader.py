@@ -58,6 +58,10 @@ class SourceReader:
             return
         if label.startswith(".call_") or label.startswith(".jp_") or label.startswith(".jr_") or label.startswith(".rst_") or label.startswith(".data_"):
             return
+        if label.startswith("code_") or label.startswith(".code_"):
+            return
+        if label.startswith("unknown_") or label.startswith(".unknown_"):
+            return
         if re.match(r"^[hw][0-9A-F]{4}$", label):
             return
         self.__label = label

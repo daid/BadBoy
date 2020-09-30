@@ -37,6 +37,9 @@ class Memory:
             return
         label.addSource(source, type)
 
+    def ensureNoLabel(self, addr):
+        self.__labels[addr] = False
+
     def getLabel(self, addr):
         return self.__labels.get(addr, None)
 

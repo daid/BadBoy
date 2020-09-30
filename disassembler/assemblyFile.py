@@ -35,6 +35,9 @@ class AssemblyFile:
 
     def newline(self):
         self.__file.write("\n")
+
+    def comment(self, line):
+        self.__file.write("    ;;%s\n" % (line))
     
     def label(self, label):
         self.__file.write("%s:\n" % (label))
@@ -60,20 +63,21 @@ class AssemblyFile:
             code = "%s ;%s" % (code,inline_comment)
 
         self.__file.write("    %-50s ;; %s%04x" % (code, self.__addr_prefix, self.addr))
-        if is_data:
-            self.__file.write(" ")
-            for n in range(size):
-                if self.__memory.hasMark(self.addr+n, "DATA"):
-                    self.__file.write(".")
-                else:
-                    self.__file.write("?")
-        else:
-            for n in range(size):
-                self.__file.write(" $%02x" % (self.__memory.byte(self.addr+n)))
-            #for n in range(size):
-            #    s = self.info.classifyData(address+n)
-            #    if s:
-            #        output.write(" %s" % (s))
+        if isinstance(self.__memory, RomMemory):
+            if is_data:
+                self.__file.write(" ")
+                for n in range(size):
+                    if self.__memory.hasMark(self.addr+n, "DATA"):
+                        self.__file.write(".")
+                    else:
+                        self.__file.write("?")
+            else:
+                for n in range(size):
+                    self.__file.write(" $%02x" % (self.__memory.byte(self.addr+n)))
+                #for n in range(size):
+                #    s = self.info.classifyData(address+n)
+                #    if s:
+                #        output.write(" %s" % (s))
         self.__file.write("\n")
         self.addr += size
 

@@ -67,7 +67,7 @@ class Disassembler:
 
         if not os.path.exists(path):
             shutil.copytree(os.path.join(os.path.dirname(__file__), "template"), path)
-            open(os.path.join(path, "rom.gb.md5"), "wt").write("%s rom.gb\n" % (self.__rom.md5sum()))
+        open(os.path.join(path, "rom.gb.md5"), "wt").write("%s rom.gb\n" % (self.__rom.md5sum()))
 
         objfiles = []
         for bank in RomInfo.getRomBanks():
