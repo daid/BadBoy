@@ -54,7 +54,7 @@ class Disassembler:
                         size = 2
                         while size < 16 and bank.hasMark(addr + size, "GFX_LOW") and bank.hasMark(addr + size + 1, "GFX_HIGH"):
                             size += 2
-                        GfxBlock(bank, addr, bpp=2, size=size)
+                        GfxBlock(bank, addr, bpp=2, size=size//2)
                     elif bank.hasMark(addr, "GFX_HIGH"):
                         size = 1
                         while size < 8 and bank.hasMark(addr + size, "GFX_HIGH"):

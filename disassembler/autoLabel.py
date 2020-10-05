@@ -40,9 +40,15 @@ class AutoLabelLocalizer:
         self.__memory = memory
         self.__blocks_labels = {}
         
-        for _, label in memory.getAllLabels():
+        first = True
+        for _, label in sorted(memory.getAllLabels()):
+            if isinstance(label, str):
+                first = False
             if not isinstance(label, AutoLabel):
                 continue
+            if first:
+                first = False
+                label.local = False
             self.__processLabel(label)
     
     def __processLabel(self, auto_label):

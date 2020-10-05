@@ -9,6 +9,10 @@ class GfxBlock(Block):
         super().__init__(memory, address, size=bpp*size)
         
         self.bpp = bpp
+        
+        if bpp == 2:
+            for n in range(1, len(self), 2):
+                memory.ensureNoLabel(address + n)
 
     def export(self, file):
         for n in range(len(self) // self.bpp):
