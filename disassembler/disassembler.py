@@ -9,6 +9,7 @@ from block.gfx import GfxBlock
 from sourceReader import SourceReader
 from annotation.annotation import callAnnotation
 from autoLabel import AutoLabelLocalizer
+from annotation.simple import DataBlock
 
 
 class Disassembler:
@@ -60,6 +61,10 @@ class Disassembler:
                         while size < 8 and bank.hasMark(addr + size, "GFX_HIGH"):
                             size += 1
                         GfxBlock(bank, addr, bpp=1, size=size)
+                    elif bank.hasMark(addr, "PTR_LOW") and bank.hasMark(addr + 1, "PTR_HIGH"):
+                        DataBlock(bank, addr, format="p", amount=1)
+                    elif bank.hasMark(addr, "WORD_LOW") and bank.hasMark(addr + 1, "WORD_HIGH"):
+                        DataBlock(bank, addr, format="w", amount=1)
 
     def export(self, path):
         for bank in RomInfo.getRomBanks():

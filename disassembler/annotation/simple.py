@@ -1,3 +1,4 @@
+import re
 from annotation.annotation import annotation
 from block.base import Block
 from block.code import CodeBlock
@@ -35,15 +36,22 @@ class DataBlock(Block):
         super().__init__(memory, addr)
         self.__format = format
         self.__amount = amount
+        self.__code = "data_%s" % (format)
 
-        macro = []
-        for idx, f in enumerate(format.lower()):
-            if f == "b":
-                macro.append("db \\1")
-            elif f in ("w", "p"):
-                macro.append("dw \\1")
-            macro.append("shift")
-        RomInfo.macros["data_%s" % (format)] = "\n".join(macro)
+        if re.match(r"b+", format):
+            print(format, "db")
+            self.__code = "db"
+        elif re.match(r"[wp]+", format):
+            self.__code = "dw"
+        else:
+            macro = []
+            for idx, f in enumerate(format.lower()):
+                if f == "b":
+                    macro.append("db \\1")
+                elif f in ("w", "p"):
+                    macro.append("dw \\1")
+                macro.append("shift")
+            RomInfo.macros[self.__code] = "\n".join(macro)
 
 
         for n in range(amount):
@@ -79,7 +87,7 @@ class DataBlock(Block):
                         label = "$%04x" % self.memory.word(file.addr + size)
                     params.append(label)
                     size += 2
-            file.asmLine(size, "data_%s" % (self.__format), *params, is_data=True)
+            file.asmLine(size, self.__code, *params, is_data=True)
 
 
 class JumpTable(Block):
