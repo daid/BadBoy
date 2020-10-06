@@ -75,28 +75,28 @@ class CodeBlock(Block):
         p0 = instr.p0
         p1 = instr.p1
         if instr.type in (JP, JR, CALL, RST) and p0 != HL:
-            p0 = self.formatAsAddressOrLabel(p0)
+            p0 = self.formatAsAddressOrLabel(p0, file.addr)
 
         # Prevent the assembler from optimizing "LD [FFxx], A" and "LD A, [FFxx]" instructions.
         if instr.type == LD and isinstance(p0, Ref) and isinstance(p0.target, int) and p0.target >= 0xFF00 and instr.p1 == A:
             instr.type = "ld_long_store"
-            p0 = "%s" % (self.formatAsAddressOrLabel(p0.target))
+            p0 = "%s" % (self.formatAsAddressOrLabel(p0.target, file.addr))
         elif instr.type == LD and isinstance(p1, Ref) and isinstance(p1.target, int) and p1.target >= 0xFF00 and instr.p0 == A:
             instr.type = "ld_long_load"
-            p1 = "%s" % (self.formatAsAddressOrLabel(p1.target))
+            p1 = "%s" % (self.formatAsAddressOrLabel(p1.target, file.addr))
 
         if isinstance(p0, Ref) and isinstance(p0.target, int):
             if p0.target in CART_CONTROL_REGS:
                 p0 = "[%s]" % CART_CONTROL_REGS[p0.target]
             else:
-                p0 = "[%s]" % (self.formatAsAddressOrLabel(p0.target))
+                p0 = "[%s]" % (self.formatAsAddressOrLabel(p0.target, file.addr))
         if isinstance(p1, Ref) and isinstance(p1.target, int):
-            p1 = "[%s]" % (self.formatAsAddressOrLabel(p1.target))
+            p1 = "[%s]" % (self.formatAsAddressOrLabel(p1.target, file.addr))
 
         if isinstance(p0, int) and instr.type not in (SET, RES, BIT):
-            p0 = self.formatAsNumberOrLabel(p0)
+            p0 = self.formatAsNumberOrLabel(p0, file.addr)
         if isinstance(p1, int) and (instr.type != ADD or instr.p0 != SP):
-            p1 = self.formatAsNumberOrLabel(p1)
+            p1 = self.formatAsNumberOrLabel(p1, file.addr)
 
         if instr.condition != None and instr.p0 != None:
             file.asmLine(instr.size, instr.type, instr.condition, str(p0))
@@ -109,16 +109,16 @@ class CodeBlock(Block):
         else:
             file.asmLine(instr.size, instr.type)
 
-    def formatAsAddressOrLabel(self, addr):
-        label = RomInfo.getLabelAt(addr, self.memory)
+    def formatAsAddressOrLabel(self, target, source_addr):
+        label = RomInfo.getLabelAt(target, RomInfo.romBank(self.memory.activeRomBankAt(source_addr)))
         if label:
             return label
-        return "$%04x" % (addr)
+        return "$%04x" % (target)
 
-    def formatAsNumberOrLabel(self, number):
-        if number < 0x1000 or number == 0xFF00:
-            return "$%02x" % (number)
-        return self.formatAsAddressOrLabel(number)
+    def formatAsNumberOrLabel(self, target, source_addr):
+        if target < 0x1000 or target == 0xFF00:
+            return "$%02x" % (target)
+        return self.formatAsAddressOrLabel(target, source_addr)
 
     def onCall(self, from_memory, from_addr, next_addr):
         pass

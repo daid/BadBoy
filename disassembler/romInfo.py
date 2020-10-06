@@ -30,6 +30,8 @@ class RomInfo:
 
     @classmethod
     def romBank(self, index):
+        if index is None:
+            return None
         if index >= len(self.__rom_banks):
             return None
         return self.__rom_banks[index]
