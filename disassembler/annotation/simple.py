@@ -39,7 +39,6 @@ class DataBlock(Block):
         self.__code = "data_%s" % (format)
 
         if re.match(r"b+", format):
-            print(format, "db")
             self.__code = "db"
         elif re.match(r"[wp]+", format):
             self.__code = "dw"
