@@ -32,3 +32,7 @@ class RomMemory(Memory):
     def word(self, addr):
         addr = addr - self.base_address + self.__bank * 0x4000
         return (self.__rom[addr]) | (self.__rom[addr + 1] << 8)
+
+    def wordBE(self, addr):
+        addr = addr - self.base_address + self.__bank * 0x4000
+        return (self.__rom[addr] << 8) | (self.__rom[addr + 1])
