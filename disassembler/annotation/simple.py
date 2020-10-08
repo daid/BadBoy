@@ -38,9 +38,9 @@ class DataBlock(Block):
         self.__amount = amount
         self.__code = "data_%s" % (format)
 
-        if re.match(r"b+", format):
+        if re.match(r"b+$", format):
             self.__code = "db"
-        elif re.match(r"[wp]+", format):
+        elif re.match(r"[wp]+$", format):
             self.__code = "dw"
         else:
             macro = []
