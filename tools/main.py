@@ -226,15 +226,17 @@ all: rom.gb
 """)
         open(os.path.join(path, "rom.md5"), "wt").write("%s rom.gb\n" % (self.rom.md5sum()))
         for bank in range(len(self.rom.data) // 0x4000):
-            if bank == 0:
-                main.write("\nSECTION \"bank00\", ROM0[$0000]\n")
-            else:
-                main.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
             main.write("include \"src/bank%02X.asm\"\n" % (bank))
             self._writeBank(bank, open(os.path.join(path, "src", "bank%02X.asm" % (bank)), "wt"))
 
     def _writeBank(self, bank, output):
         output.write(";; Disassembled with BadBoy Disassembler: https://github.com/daid/BadBoy\n")
+
+        if bank == 0:
+            output.write("\nSECTION \"bank00\", ROM0[$0000]\n")
+        else:
+            output.write("\nSECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (bank, bank))
+
         addr = 0x4000 * bank
         end_of_bank = addr + 0x4000
         while end_of_bank > addr and self.rom.data[end_of_bank-1] == 0x00:
@@ -265,7 +267,8 @@ all: rom.gb
         elif self.info.hasMark(addr, self.info.MARK_WORD_LOW) and self.info.hasMark(addr + 1, self.info.MARK_WORD_HIGH):
             return self.__formatWord
         elif self.info.classifyDataAsChar(addr) == "G" and self.info.classifyDataAsChar(addr + 1) == "G":
-            if (self.info.rom[addr] & 1) == 0 and (self.info.rom[addr + 1] & 1) == 1:
+            #if (self.info.rom[addr] & 1) == 0 and (self.info.rom[addr + 1] & 1) == 1:
+            if (addr + 1) not in self.info.rom_symbols:
                 return self.__formatGraphics2bpp
             return self.__formatGraphics1bpp
         return self.__formatRawData
@@ -293,7 +296,7 @@ all: rom.gb
             if a & (0x80 >> n):
                 p |= 1
             gfx += "%d" % p
-        self.formatLine(output, addr, 2, "db   %%%s" % gfx)
+        self.formatLine(output, addr, 1, "db   %%%s" % gfx)
         return addr + 1
 
     def __formatGraphics2bpp(self, output, addr):
