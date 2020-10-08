@@ -90,6 +90,15 @@ class Disassembler:
                 macro_file.write("    %s\n" % (line.rstrip()))
             macro_file.write("ENDM\n")
 
+        charmap_file = open(os.path.join(path, "src", "include", "charmaps.inc"), "wt")
+        for name, data in sorted(RomInfo.charmap.items()):
+            if name == "main":
+                charmap_file.write("SETCHARMAP %s\n" % (name))
+            else:
+                charmap_file.write("NEWCHARMAP %s\n" % (name))
+            for key, value in sorted(data.items()):
+                charmap_file.write("CHARMAP \"%s\", %d\n" % (value, key))
+
     def __exportRomBank(self, file, bank):
         bank_len = len(bank)
         bank_end = bank.base_address + bank_len

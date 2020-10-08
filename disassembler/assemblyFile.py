@@ -11,6 +11,7 @@ class AssemblyFile:
         self.__file.write("\n")
         self.__file.write("INCLUDE \"include/hardware.inc\"\n")
         self.__file.write("INCLUDE \"include/macros.inc\"\n")
+        self.__file.write("INCLUDE \"include/charmaps.inc\"\n")
         self.addr = None
         self.__memory = None
         self.__addr_prefix = None

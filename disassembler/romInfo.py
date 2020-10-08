@@ -26,6 +26,7 @@ class RomInfo:
             "short_halt": "db $76",
             "short_stop": "db $10",
         }
+        self.charmap = {}
 
 
     @classmethod
