@@ -25,6 +25,8 @@ class Block:
     def resize(self, new_size, *, allow_fail=False):
         assert new_size >= self.__size
         if allow_fail:
+            if self.__base_address + new_size > self.__memory.base_address + len(self.__memory):
+                return False
             for n in range(self.__size, new_size):
                 if self.__memory[n + self.__base_address]:
                     return False
