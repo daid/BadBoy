@@ -30,6 +30,13 @@ def string(memory, addr, *, size=None):
 def gfx(memory, addr):
     GfxBlock(memory, addr, bpp=2, size=8)
 
+@annotation
+def jumptablefunction(memory, addr):
+    JumpTableFunction(memory, addr)
+
+class JumpTableFunction(CodeBlock):
+    def onCall(self, from_memory, from_address, next_addr):
+        JumpTable(from_memory, next_addr)
 
 class DataBlock(Block):
     def __init__(self, memory, addr, *, format, amount):
@@ -92,7 +99,7 @@ class DataBlock(Block):
 class JumpTable(Block):
     def __init__(self, memory, addr, *, amount=None):
         super().__init__(memory, addr)
-        
+
         for n in range(amount if amount is not None else 0x2000):
             target = memory.word(addr + len(self))
             if target >= memory.base_address and target < memory.base_address + len(memory):
