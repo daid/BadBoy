@@ -14,13 +14,14 @@ class CodeBlock(Block):
         super().__init__(memory, address)
         
         while True:
-            if memory[address]:
+            if address >= 0x8000 or memory[address]:
                 break
 
             try:
                 instr = Instruction(self.memory, address)
             except InstructionDecodeError:
                 print("Encountered invalid instruction in code at: %02x:%04x" % (memory.bankNumber, address))
+                print(hex(memory.byte(address)))
                 break
             if not self.resize(len(self) + instr.size, allow_fail=True):
                 print("Odd instruction overlap at: %02x:%04x" % (memory.bankNumber, address))
@@ -45,9 +46,9 @@ class CodeBlock(Block):
                         other_block = CodeBlock(other_memory, target)
                     elif isinstance(other_block, CodeBlock):
                         if instr.type in (CALL, RST):
-                            other_block.onCall(other_memory, address - instr.size, address)
+                            other_block.onCall(self.memory, address - instr.size, address)
                         else:
-                            other_block.onJump(other_memory, address - instr.size, address)
+                            other_block.onJump(self.memory, address - instr.size, address)
                     other_block.addAutoLabel(target, address, instr.type)
             elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int) and instr.p0.target >= 0x8000:
                 mem = RomInfo.memoryAt(instr.p0.target, memory)

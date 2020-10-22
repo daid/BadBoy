@@ -12,6 +12,8 @@
 #include "input.h"
 #include "timer.h"
 #include "mm.h"
+#include "ezflash.h"
+
 
 static void initCore()
 {
@@ -110,15 +112,25 @@ void coreLoop()
     }
 }
 
+void usage(const char* app)
+{
+    printf("Usage: %s rom.gb[c] [options]\n", app);
+    printf("Options:\n");
+    printf("  -o <instrumentation_file>            Write an instrumentation file from this run.\n");
+    printf("  -r <replay_file>                     Use the given replay file default for recording.\n");
+    printf("  -p                                   Play back the replay file.\n");
+}
+
 int main(int argc, char** argv)
 {
     std::string rom_file;
     std::string output_instrumentation_file;
     std::string replay_file;
     bool replay_playback = false;
+    const char* ezflash = nullptr;
 
     int c;
-    while((c = getopt(argc, argv, "-o:r:p")) != -1)
+    while((c = getopt(argc, argv, "-o:r:pe:")) != -1)
     {
         switch(c)
         {
@@ -126,11 +138,14 @@ int main(int argc, char** argv)
         case 'o': output_instrumentation_file = optarg; break;
         case 'r': replay_file = optarg; break;
         case 'p': replay_playback = true; break;
+        case 'e': ezflash = optarg; break;
+        case '?': usage(argv[0]); return 1;
         }
     }
     if (rom_file.empty())
     {
-        printf("No rom file given");
+        printf("No rom file given\n");
+        usage(argv[0]);
         return 1;
     }
 
@@ -139,8 +154,12 @@ int main(int argc, char** argv)
         input.setReplayFile(replay_file.c_str(), replay_playback);
     initCore();
 
+    if (ezflash)
+        card.mbc = std::make_unique<EZFlashMBC>(ezflash);
+
     coreLoop();
     printf("Done: %04x:%02x:%d\n", cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
+    printf("SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
 
     if (!output_instrumentation_file.empty())
     {

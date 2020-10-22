@@ -20,7 +20,6 @@ uint32_t MBC1::mapSRam(uint16_t address)
 
 void MBC1::writeRom(uint16_t address, uint8_t value)
 {
-    printf("%04x:%02x\n", address, value);
     if (address >= 0x0000 && address < 0x2000)
     {
         ram_enabled = (value & 0x0F) == 0x0A;

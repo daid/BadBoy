@@ -7,6 +7,10 @@ from romInfo import RomInfo
 def sdccFarcall(memory, addr):
     SdccFarcallCodeBlock(memory, addr)
 
+@annotation
+def sdccRLEInit(memory, addr):
+    SdccRLEInitCodeBlock(memory, addr)
+
 
 class SdccFarcallCodeBlock(CodeBlock):
     def onCall(self, from_memory, from_address, next_addr):
@@ -33,5 +37,30 @@ class SdccFarrcallInfoBlock(Block):
         target_block.addAutoLabel(self.__target_address, address, "call")
 
     def export(self, file):
-        
         file.dataLine(4)
+
+
+class SdccRLEInitCodeBlock(CodeBlock):
+    def onCall(self, from_memory, from_address, next_addr):
+        data = SdccRLEInfoBlock(from_memory, next_addr)
+        CodeBlock(from_memory, next_addr + len(data))
+
+class SdccRLEInfoBlock(Block):
+    def __init__(self, memory, address):
+        super().__init__(memory, address)
+        while True:
+            count = memory.byte(address + len(self))
+            if count & 0x80:
+                count = 1
+            self.resize(len(self) + 1 + count)
+            if count == 0:
+                break
+
+    def export(self, file):
+        while True:
+            count = self.memory.byte(file.addr)
+            if count & 0x80:
+                count = 1
+            file.dataLine(1 + count)
+            if count == 0:
+                break
