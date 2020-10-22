@@ -26,6 +26,7 @@ void MBC1::writeRom(uint16_t address, uint8_t value)
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
+        value &= 0x1F;
         if (value == 0) value = 1;
         high_rom_bank = (high_rom_bank & 0xFFE0) | value;
     }
@@ -33,7 +34,8 @@ void MBC1::writeRom(uint16_t address, uint8_t value)
     {
         if (mode)
         {
-            low_rom_bank = (low_rom_bank & 0x001F) | (value << 5);
+            value &= 0x03;
+            low_rom_bank = (value << 5);
             high_rom_bank = (high_rom_bank & 0x001F) | (value << 5);
         } else {
             ram_bank = value;
