@@ -13,7 +13,8 @@ EZFlashMBC::EZFlashMBC(const char* image_filename)
     fseek(f, 0, SEEK_END);
     image.resize(ftell(f));
     fseek(f, 0, SEEK_SET);
-    assert(fread(image.data(), image.size(), 1, f) == 1);
+    if (fread(image.data(), 1, image.size(), f) != image.size())
+        printf("Failed to read sd card image...\n");
     fclose(f);
 }
 
@@ -92,7 +93,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         }
         unlock = 0;
     } else {
-        printf("EZFlash ROM Write: %04x:%02x from %04x\n", address, value, cpu.pc);
+        printf("EZFlash ROM Write: %04x:%02x from %02x:%04x\n", address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
     }
 }
 

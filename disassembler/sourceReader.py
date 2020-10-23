@@ -35,7 +35,7 @@ class SourceReader:
         if section_type == "ROM0":
             self.__memory = RomInfo.romBank(0)
         elif section_type == "ROMX":
-            bank_nr = int(re.search(r"BANK\[\$([0-9a-f]+)\]", line.strip().split(",")[2])[1], 16)
+            bank_nr = int(re.search(r"BANK\[\$([0-9a-f]+)\]", line.strip().split(",")[2]).group(1), 16)
             self.__memory = RomInfo.romBank(bank_nr)
         elif section_type == "WRAM0":
             self.__memory = RomInfo.getWRam()
@@ -72,7 +72,7 @@ class SourceReader:
             m = re.match(r"([0-9a-fA-F]{4})", info)
             if not m:
                 return
-        addr = int(m[1], 16)
+        addr = int(m.group(1), 16)
 
         for comment in self.__comments:
             self.__memory.addComment(addr, comment)

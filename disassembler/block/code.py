@@ -20,8 +20,7 @@ class CodeBlock(Block):
             try:
                 instr = Instruction(self.memory, address)
             except InstructionDecodeError:
-                print("Encountered invalid instruction in code at: %02x:%04x" % (memory.bankNumber, address))
-                print(hex(memory.byte(address)))
+                print("Encountered invalid instruction [%02x] in code at: %02x:%04x" % (memory.byte(address), memory.bankNumber, address))
                 break
             if not self.resize(len(self) + instr.size, allow_fail=True):
                 print("Odd instruction overlap at: %02x:%04x" % (memory.bankNumber, address))

@@ -37,7 +37,16 @@ class SdccFarrcallInfoBlock(Block):
         target_block.addAutoLabel(self.__target_address, address, "call")
 
     def export(self, file):
-        file.dataLine(4)
+        try:
+            target_memory = RomInfo.memoryAt(self.__target_address, RomInfo.romBank(self.__bank))
+        except IndexError:
+            file.dataLine(4)
+            return
+        label = target_memory.getLabel(self.__target_address)
+        if not label:
+            file.dataLine(4)
+            return
+        file.asmLine(4, "dw", str(label), "BANK(%s)" % (label), is_data=True)
 
 
 class SdccRLEInitCodeBlock(CodeBlock):
