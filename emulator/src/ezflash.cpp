@@ -70,6 +70,22 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             card.getSRam(0).set(0x02);
             break;
         }
+    } else if (address == 0x7fc0 && unlock == 3) {
+        printf("Switch SRAM target3: %02x\n", value);
+        printf("EZFlash ROM Write: %04x:%02x from %02x:%04x\n", address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        switch(value)
+        {
+        case 0: //Switches back to normal SRAM?
+            break;
+        case 3:
+            //Setting this indicates that there is SRAM to be backed up to SD card, exact workings unknown.
+            // card.getSRam(0).set(0xAA);
+            break;
+        case 6:
+            // This switches to RTC registers
+            // Seems to map to SRAM 0xA008 and up normal RTC chip registers (not MBC3 style, but SSMMHH DDMMYY)
+            break;
+        }
     } else if (address == 0x7fb0 && unlock == 3) {
         image_sector_nr = value;
     } else if (address == 0x7fb1 && unlock == 3) {
