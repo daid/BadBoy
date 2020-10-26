@@ -139,10 +139,22 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
     } else if (address == 0x7fb4 && unlock == 3) {
         image_sector_count = value; // unsure, only seen value 1 so far.
         printf("Accessing SD Sector: %08x:%02x\n", image_sector_nr, image_sector_count);
+    } else if (address == 0x7f37 && unlock == 3) {
+        printf("Preparing target MBC to: %02x\n", value);
+    } else if (address == 0x7fc1 && unlock == 3) {
+        printf("Preparing ROM mask (low) to: %02x\n", value);
+    } else if (address == 0x7fc2 && unlock == 3) {
+        printf("Preparing ROM mask (high) to: %02x\n", value);
+    } else if (address == 0x7fc3 && unlock == 3) {
+        printf("Preparing header checksum?!?: %02x\n", value);
+    } else if (address == 0x7fc4 && unlock == 3) {
+        printf("Preparing SRAM mask to: %02x\n", value);
+    //} else if (address == 0x7fd4 && unlock == 3) { 
+    //It seems to write $00 to this before preparing the cart for reboot, reason is unknown
     } else if (address == 0x7fe0 && unlock == 3) {
         if (value == 0x80)
         {
-            //Start loaded rom (should reset)
+            //Start loaded rom (should reset and apply above prepared settings)
             input.quit = true;
         }
     } else if (address == 0x7ff0) {
