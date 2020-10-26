@@ -24,20 +24,29 @@ public:
             card.mbc->writeRom((id & 0x3fff) | 0x4000, value);
     }
 };
+class Mem8OpenBus : public Mem8
+{
+public:
+    uint8_t get() const override
+    {
+        return 0xFF;
+    }
+
+    void setImpl(uint8_t value) override
+    {
+    }
+};
 
 static Mem8Block<Mem8Rom> bootrom;
 static Mem8Block<Mem8Rom> rom;
 static Mem8Block<Mem8Ram> sram;
-
+static Mem8OpenBus open_bus;
 
 void Card::init()
 {
     bootrom.resize(0x100);
-    sram.resize(0x8000);
     for(uint32_t n=0; n<0x100; n++)
         bootrom[n].id = n | ID_ROM;
-    for(uint32_t n=0; n<sram.size(); n++)
-        sram[n].id = n | ID_SRAM;
 
     FILE* f = fopen("dmg_boot.bin", "rb");
     if (f)
@@ -84,10 +93,8 @@ bool Card::load(const char* filename)
     while(uint32_t(rom_bank_mask + 1) * 0x4000 < size)
         rom_bank_mask = (rom_bank_mask << 1) | 0x01;
     size = (rom_bank_mask + 1) * 0x4000;
-    rom.resize(size);
+    resizeRom(size);
     fseek(f, 0, SEEK_SET);
-    for(uint32_t n=0; n<size; n++)
-        rom[n].id = n | ID_ROM;
 
     uint32_t n = 0;
     while(fread(&rom[n].value, sizeof(uint8_t), sizeof(uint8_t), f) > 0)
@@ -141,9 +148,18 @@ bool Card::load(const char* filename)
         //mbc = std::make_unique<MBC7>();
         break;
     }
+    switch(rom[0x149].value)
+    {
+    case 1: resizeSRam(2 * 1024); break;
+    case 2: resizeSRam(8 * 1024); break;
+    case 3: resizeSRam(32 * 1024); break;
+    case 4: resizeSRam(128 * 1024); break;
+    case 5: resizeSRam(64 * 1024); break;
+    }
+    printf("Rom header:\n");
     printf("Card type: %02x: %s\n", rom[0x147].value, typeid(*mbc.get()).name());
     printf("ROM Size: %dKB (%02x)\n", 32 << rom[0x148].value, rom[0x148].value);
-    printf("SRAM Size: %dKB (%02x)\n", sram.size(), rom[0x149].value);
+    printf("SRAM Size: %dKB (%02x)\n", int(sram.size()), rom[0x149].value);
 
     fclose(f);
     return true;
@@ -157,6 +173,10 @@ Mem8& Card::getRom(uint16_t address)
 
 Mem8& Card::getSRam(uint16_t address)
 {
+    if (sram.empty())
+        return open_bus;
+    if (!mbc->sramEnabled())
+        return open_bus;
     uint32_t sram_address = mbc->mapSRam(address);
     return sram[sram_address % sram.size()];
 }
@@ -170,4 +190,23 @@ void Card::dumpInstrumentation(FILE* f)
 {
     rom.dumpInstrumentation(f);
     sram.dumpInstrumentation(f);
+}
+
+void Card::resizeRom(size_t new_size)
+{
+    rom.resize(new_size);
+    for(size_t n=0; n<rom.size(); n++)
+        rom[n].id = n | ID_ROM;
+}
+
+void Card::resizeSRam(size_t new_size)
+{
+    sram.resize(new_size);
+    for(size_t n=0; n<sram.size(); n++)
+        sram[n].id = n | ID_SRAM;
+}
+
+Mem8& Card::getRawSRam(uint32_t address)
+{
+    return sram[address];
 }

@@ -9,6 +9,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) = 0;
     virtual void writeRom(uint16_t address, uint8_t value) = 0;
     virtual uint32_t getRomBankNr() = 0;
+    virtual bool sramEnabled() = 0;
 };
 
 class MBCNone : public MBC
@@ -17,7 +18,8 @@ public:
     virtual uint32_t mapRom(uint16_t address) { return address; }
     virtual uint32_t mapSRam(uint16_t address) { return address; }
     virtual void writeRom(uint16_t address, uint8_t value) {}
-    virtual uint32_t getRomBankNr() { return 1; };
+    virtual uint32_t getRomBankNr() { return 1; }
+    virtual bool sramEnabled() { return true; }
 };
 
 class MBC1 : public MBC
@@ -27,6 +29,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) override;
     virtual void writeRom(uint16_t address, uint8_t value) override;
     virtual uint32_t getRomBankNr() { return high_rom_bank; }
+    virtual bool sramEnabled() { return ram_enabled; }
 
 private:
     bool ram_enabled = false;
@@ -43,6 +46,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) override;
     virtual void writeRom(uint16_t address, uint8_t value) override;
     virtual uint32_t getRomBankNr() { return rom_bank; }
+    virtual bool sramEnabled() { return ram_enabled; }
 
 private:
     bool ram_enabled = false;
@@ -56,6 +60,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) override;
     virtual void writeRom(uint16_t address, uint8_t value) override;
     virtual uint32_t getRomBankNr() { return rom_bank; }
+    virtual bool sramEnabled() { return ram_enabled; }
 
 private:
     bool ram_enabled = false;
@@ -75,6 +80,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) override;
     virtual void writeRom(uint16_t address, uint8_t value) override;
     virtual uint32_t getRomBankNr() { return rom_bank; }
+    virtual bool sramEnabled() { return ram_enabled; }
 
 private:
     bool ram_enabled = false;
@@ -89,6 +95,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) override;
     virtual void writeRom(uint16_t address, uint8_t value) override;
     virtual uint32_t getRomBankNr() { return rom_bank; }
+    virtual bool sramEnabled() { return ram_enabled; }
 
 private:
     bool ram_enabled = false;
@@ -103,6 +110,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) override;
     virtual void writeRom(uint16_t address, uint8_t value) override;
     virtual uint32_t getRomBankNr() { return rom_bank; }
+    virtual bool sramEnabled() { return ram_enabled; }
 
 private:
     bool ram_enabled = false;
@@ -117,6 +125,7 @@ public:
     virtual uint32_t mapSRam(uint16_t address) override;
     virtual void writeRom(uint16_t address, uint8_t value) override;
     virtual uint32_t getRomBankNr() { return rom_bank; }
+    virtual bool sramEnabled() { return ram_enabled; }
 
 private:
     bool ram_enabled = false;

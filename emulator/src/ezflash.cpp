@@ -5,6 +5,12 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <time.h>
+
+static int dec2bcd(int n)
+{
+    return (n % 10) | (n / 10 * 16);
+}
 
 
 EZFlashMBC::EZFlashMBC(const char* image_filename)
@@ -16,6 +22,9 @@ EZFlashMBC::EZFlashMBC(const char* image_filename)
     if (fread(image.data(), 1, image.size(), f) != image.size())
         printf("Failed to read sd card image...\n");
     fclose(f);
+
+    // Force to have a lot of SRAM data so we can manage our data somewhat.
+    card.resizeSRam(0x2000 * 256 * 16);
 }
 
 uint32_t EZFlashMBC::mapRom(uint16_t address)
@@ -27,8 +36,9 @@ uint32_t EZFlashMBC::mapRom(uint16_t address)
 
 uint32_t EZFlashMBC::mapSRam(uint16_t address)
 {
-    //if (address == 0x0000) printf("  SRAM access\n");
-    return address;
+    //if (sram_type != sram_sd_data) printf("  SRAM access: %02x:%04x\n", sram_type, sram_bank, address);
+    //if (sram_type == sram_status) printf("  SRAM access: %02x:%02x:%04x\n", sram_type, sram_bank, address);
+    return address + sram_bank * 0x2000 + sram_type * 0x2000 * 256;
 }
 
 void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
@@ -36,10 +46,12 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
     if (address == 0x2000)
     {
         //The EZFlash seems to write 0xFF to the bank number but then never accesses the top bank.
-        // But it seems to default to bank 0x01
+        // But it seems to default to bank 0x01 when tested on real hardware.
         if (value == 0xff)
             value = 0x01;
         rom_bank = value;
+    } else if (address == 0x4000) {
+        sram_bank = value;
     } else if (address == 0x7f00) {
         if (value == 0xE1) unlock = 1; else unlock = 0;
     } else if (address == 0x7f10) {
@@ -48,42 +60,69 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         if (value == 0xE3 && unlock == 2) { unlock = 3; } else unlock = 0;
     } else if (address == 0x7f30 && unlock == 3) {
         //"SD" commands?
-        //printf("Switch SRAM target: %02x\n", value);
+        //printf("Switch SRAM MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
         switch(value)
         {
         case 0: //Normal SRAM?
+            sram_type = sram_normal;
             break;
         case 1: //SD card sector data
+            sram_type = sram_sd_data;
             for(int n=0; n<512; n++)
-                card.getSRam(n).set(image[n + image_sector_nr * 512]);
+                setSRam(0, n, image[n + image_sector_nr * 512]);
             break;
         case 3: // SD card command state?
-            card.getSRam(0).set(0x01);
+            sram_type = sram_sd_status;
+            setSRam(0, 0, 0x01);
             break;
         }
     } else if (address == 0x7f36 && unlock == 3) {
         //"ROM" commands?
-        printf("Switch SRAM target2: %02x\n", value);
+        printf("Switch SRAM MUX2: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
         switch(value)
         {
-        case 3: // command state?
-            card.getSRam(0).set(0x02);
+        case 0: //Normal SRAM?
+            sram_type = sram_normal;
+            break;
+        case 3: // command state of ROM update?
+            sram_type = sram_rom_status;
+            setSRam(0, 0, 0x02);
             break;
         }
     } else if (address == 0x7fc0 && unlock == 3) {
-        printf("Switch SRAM target3: %02x\n", value);
-        printf("EZFlash ROM Write: %04x:%02x from %02x:%04x\n", address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        printf("Switch SRAM MUX3: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
         switch(value)
         {
         case 0: //Switches back to normal SRAM?
+            //if (sram_type == sram_status) printf("STATUS 0x201: %02x\n", card.getSRam(0x201).get());
+            sram_type = sram_normal;
             break;
         case 3:
+            sram_type = sram_status;
             //Setting this indicates that there is SRAM to be backed up to SD card, exact workings unknown.
-            // card.getSRam(0).set(0xAA);
+            // setSRam(0x11, 0x201).set(0xAA);
+
+            //Setting this indicates that the battery is not dry. (we should only do this on init)
+            // Loader sets this to 0x88 quite often when it is running.
+            setSRam(0x11, 0x201, 0x88);
             break;
         case 6:
-            // This switches to RTC registers
-            // Seems to map to SRAM 0xA008 and up normal RTC chip registers (not MBC3 style, but SSMMHH DDMMYY)
+            // This switches to RTC registers, writting to them is ignored by this implementation.
+            // Unknown if these are latched or not, but current loader switches this on all the time before reading.
+            {
+                time_t rawtime;
+                time (&rawtime);
+                tm* timeinfo = localtime(&rawtime);
+
+                sram_type = sram_rtc_data;
+                setSRam(0x00, 8, dec2bcd(timeinfo->tm_sec));
+                setSRam(0x00, 9, dec2bcd(timeinfo->tm_min));
+                setSRam(0x00, 10, dec2bcd(timeinfo->tm_hour));
+                setSRam(0x00, 11, dec2bcd(timeinfo->tm_mday));
+                //setSRam(0x00, 12).set(dec2bcd(timeinfo->)); ?? unknown maybe week day, need to test on hardware
+                setSRam(0x00, 13, dec2bcd(timeinfo->tm_mon + 1));
+                setSRam(0x00, 14, dec2bcd(timeinfo->tm_year % 100));
+            }
             break;
         }
     } else if (address == 0x7fb0 && unlock == 3) {
@@ -109,11 +148,16 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         }
         unlock = 0;
     } else {
-        printf("EZFlash ROM Write: %04x:%02x from %02x:%04x\n", address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        printf("Unknown EZFlash ROM Write: %04x:%02x from %02x:%04x\n", address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
     }
 }
 
 uint32_t EZFlashMBC::getRomBankNr()
 {
     return rom_bank;
+}
+
+void EZFlashMBC::setSRam(uint32_t bank, uint32_t address, uint8_t data)
+{
+    card.getRawSRam(address + bank * 0x2000 + sram_type * 0x2000 * 256).set(data);
 }

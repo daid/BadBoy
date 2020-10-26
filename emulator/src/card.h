@@ -17,5 +17,8 @@ public:
     std::unique_ptr<MBC> mbc;
 
     void dumpInstrumentation(FILE* f);
+    void resizeRom(size_t new_size);
+    void resizeSRam(size_t new_size);
+    Mem8& getRawSRam(uint32_t address);
 };
 extern Card card;
