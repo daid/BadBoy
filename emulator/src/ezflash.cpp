@@ -36,6 +36,8 @@ uint32_t EZFlashMBC::mapRom(uint16_t address)
 
 uint32_t EZFlashMBC::mapSRam(uint16_t address)
 {
+    if (sram_type == sram_rtc_data)
+        return address + sram_type * 0x2000 * 256;
     //if (sram_type != sram_sd_data) printf("  SRAM access: %02x:%04x\n", sram_type, sram_bank, address);
     //if (sram_type == sram_status) printf("  SRAM access: %02x:%02x:%04x\n", sram_type, sram_bank, address);
     return address + sram_bank * 0x2000 + sram_type * 0x2000 * 256;
@@ -52,6 +54,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         rom_bank = value;
     } else if (address == 0x4000) {
         sram_bank = value;
+        printf("SRAM Bank: %02x\n", sram_bank);
     } else if (address == 0x7f00) {
         if (value == 0xE1) unlock = 1; else unlock = 0;
     } else if (address == 0x7f10) {

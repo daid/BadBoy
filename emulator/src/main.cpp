@@ -158,7 +158,7 @@ int main(int argc, char** argv)
         card.mbc = std::make_unique<EZFlashMBC>(ezflash);
 
     coreLoop();
-    printf("Done: %04x:%02x:%d\n", cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
+    printf("Done: %02x:%04x:%02x:%d\n", card.mbc->getRomBankNr(), cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
     printf("SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
 
     if (!output_instrumentation_file.empty())

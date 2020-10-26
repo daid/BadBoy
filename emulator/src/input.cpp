@@ -49,6 +49,8 @@ void Input::update()
 
             if (e.key.keysym.sym == SDLK_TAB) fast_forward = 1;
             if (e.key.keysym.sym == SDLK_BACKSPACE) fast_forward = 100;
+
+            if (e.key.keysym.sym == SDLK_ESCAPE) quit = true;
             break;
         case SDL_KEYUP:
             if (e.key.keysym.sym == SDLK_DOWN) directions &=~0x08;
