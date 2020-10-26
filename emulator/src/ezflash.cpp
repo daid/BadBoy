@@ -39,7 +39,7 @@ uint32_t EZFlashMBC::mapSRam(uint16_t address)
     if (sram_type == sram_rtc_data)
         return address + sram_type * 0x2000 * 256;
     //if (sram_type != sram_sd_data) printf("  SRAM access: %02x:%04x\n", sram_type, sram_bank, address);
-    //if (sram_type == sram_status) printf("  SRAM access: %02x:%02x:%04x\n", sram_type, sram_bank, address);
+    //if (sram_type == sram_sd_to_rom_data) printf("  SRAM access: %02x:%02x:%04x\n", sram_type, sram_bank, address);
     return address + sram_bank * 0x2000 + sram_type * 0x2000 * 256;
 }
 
@@ -87,7 +87,17 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         case 0: //Normal SRAM?
             sram_type = sram_normal;
             break;
+        case 1:
+            sram_type = sram_sd_to_rom_data;
+            break;
         case 3: // command state of ROM update?
+            //Print the sd_to_rom_data to understand it.
+            for(int n=0; n<0x200; n++)
+            {
+                if (n % 16 == 0) printf("%04x: ", n);
+                printf("%02x ", card.getRawSRam(n + sram_type * 0x2000 * 256).get());
+                if (n % 16 == 15) printf("\n");
+            }
             sram_type = sram_rom_status;
             setSRam(0, 0, 0x02);
             break;
@@ -103,7 +113,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         case 3:
             sram_type = sram_status;
             //Setting this indicates that there is SRAM to be backed up to SD card, exact workings unknown.
-            // setSRam(0x11, 0x201).set(0xAA);
+            //setSRam(0x11, 0x000, 0xAA);
 
             //Setting this indicates that the battery is not dry. (we should only do this on init)
             // Loader sets this to 0x88 quite often when it is running.

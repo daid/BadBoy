@@ -34,4 +34,5 @@ private:
     static constexpr uint32_t sram_rom_status = 3;
     static constexpr uint32_t sram_rtc_data = 4;
     static constexpr uint32_t sram_status = 5;
+    static constexpr uint32_t sram_sd_to_rom_data = 6;
 };
