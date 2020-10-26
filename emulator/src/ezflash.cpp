@@ -39,7 +39,7 @@ uint32_t EZFlashMBC::mapSRam(uint16_t address)
     if (sram_type == sram_rtc_data)
         return address + sram_type * 0x2000 * 256;
     //if (sram_type != sram_sd_data) printf("  SRAM access: %02x:%04x\n", sram_type, sram_bank, address);
-    //if (sram_type == sram_sd_to_rom_data) printf("  SRAM access: %02x:%02x:%04x\n", sram_type, sram_bank, address);
+    if (sram_type == sram_unknown) printf("  SRAM access: %02x:%02x:%04x\n", sram_type, sram_bank, address);
     return address + sram_bank * 0x2000 + sram_type * 0x2000 * 256;
 }
 
@@ -91,12 +91,9 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             sram_type = sram_sd_to_rom_data;
             break;
         case 3: // command state of ROM update?
-            //Print the sd_to_rom_data to understand it.
-            for(int n=0; n<0x200; n++)
+            if (sram_type == sram_sd_to_rom_data)
             {
-                if (n % 16 == 0) printf("%04x: ", n);
-                printf("%02x ", card.getRawSRam(n + sram_type * 0x2000 * 256).get());
-                if (n % 16 == 15) printf("\n");
+                loadNewRom();
             }
             sram_type = sram_rom_status;
             setSRam(0, 0, 0x02);
@@ -109,6 +106,9 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         case 0: //Switches back to normal SRAM?
             //if (sram_type == sram_status) printf("STATUS 0x201: %02x\n", card.getSRam(0x201).get());
             sram_type = sram_normal;
+            break;
+        case 2:
+            //Used by the initial boot stage, reason is unknown...
             break;
         case 3:
             sram_type = sram_status;
@@ -185,4 +185,47 @@ uint32_t EZFlashMBC::getRomBankNr()
 void EZFlashMBC::setSRam(uint32_t bank, uint32_t address, uint8_t data)
 {
     card.getRawSRam(address + bank * 0x2000 + sram_type * 0x2000 * 256).set(data);
+}
+
+void EZFlashMBC::loadNewRom()
+{
+    //Load the buffer into 128 32bit integers so we can use those.
+    uint32_t buffer[128];
+
+    for(int n=0; n<128; n++)
+    {
+        buffer[n] = 
+            card.getRawSRam(n * 4 + 0 + sram_sd_to_rom_data * 0x2000 * 256).get() << 0 |
+            card.getRawSRam(n * 4 + 1 + sram_sd_to_rom_data * 0x2000 * 256).get() << 8 |
+            card.getRawSRam(n * 4 + 2 + sram_sd_to_rom_data * 0x2000 * 256).get() << 16 |
+            card.getRawSRam(n * 4 + 3 + sram_sd_to_rom_data * 0x2000 * 256).get() << 24;
+
+        if (n % 4 == 0) printf("%02x:", n);
+        printf(" %08x", buffer[n]);
+        if (n % 4 == 3) printf("\n");
+    }
+    
+    uint32_t rom_size = buffer[124];
+    uint32_t addr = 0;
+    //card.resizeRom(rom_size); //resizing the rom breaks instrumentation tracking crashing the emulator.
+    int index = 1;
+    
+    while(1)
+    {
+        if (addr >= rom_size)
+            break;
+        uint32_t sector = buffer[index++];
+        uint32_t count = buffer[index++];
+        //printf("%08x %08x\n", sector, count);
+        while(count)
+        {
+            if (addr >= rom_size)
+                break;
+            //for(int n=0; n<512; n++)
+            //    card.updateRom(addr+n, image[sector * 512 + n]);
+            addr += 512;
+            sector++;
+            count--;
+        }
+    }
 }

@@ -18,6 +18,7 @@ public:
 
     void dumpInstrumentation(FILE* f);
     void resizeRom(size_t new_size);
+    void updateRom(uint32_t address, uint8_t data);
     void resizeSRam(size_t new_size);
     Mem8& getRawSRam(uint32_t address);
 };

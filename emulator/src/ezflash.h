@@ -16,6 +16,7 @@ public:
 
 private:
     void setSRam(uint32_t bank, uint32_t addr, uint8_t data);
+    void loadNewRom();
 
     std::vector<uint8_t> image;
 
@@ -35,4 +36,5 @@ private:
     static constexpr uint32_t sram_rtc_data = 4;
     static constexpr uint32_t sram_status = 5;
     static constexpr uint32_t sram_sd_to_rom_data = 6;
+    static constexpr uint32_t sram_unknown = 7;
 };
