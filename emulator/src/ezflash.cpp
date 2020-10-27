@@ -78,6 +78,9 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             sram_type = sram_sd_status;
             setSRam(0, 0, 0x01);
             break;
+        default:
+            printf("Unknown value written to MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+            break;
         }
     } else if (address == 0x7f36 && unlock == 3) {
         //"ROM" commands?
@@ -97,6 +100,9 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             }
             sram_type = sram_rom_status;
             setSRam(0, 0, 0x02);
+            break;
+        default:
+            printf("Unknown value written to MUX2: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
             break;
         }
     } else if (address == 0x7fc0 && unlock == 3) {
@@ -136,6 +142,9 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
                 setSRam(0x00, 13, dec2bcd(timeinfo->tm_mon + 1));
                 setSRam(0x00, 14, dec2bcd(timeinfo->tm_year % 100));
             }
+            break;
+        default:
+            printf("Unknown value written to MUX3: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
             break;
         }
     } else if (address == 0x7fb0 && unlock == 3) {
