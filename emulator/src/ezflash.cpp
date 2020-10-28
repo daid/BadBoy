@@ -125,6 +125,10 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             // Loader sets this to 0x88 quite often when it is running.
             setSRam(0x11, 0x201, 0x88);
             break;
+        case 4:
+            sram_type = sram_fw_version;
+            setSRam(0x00, 0x000, 10);
+            break;
         case 6:
             // This switches to RTC registers, writting to them is ignored by this implementation.
             // Unknown if these are latched or not, but current loader switches this on all the time before reading.
