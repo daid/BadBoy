@@ -56,11 +56,11 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         sram_bank = value;
         printf("SRAM Bank: %02x\n", sram_bank);
     } else if (address == 0x7f00) {
-        if (value == 0xE1) unlock = 1; else unlock = 0;
+        if (value == 0xE1 && unlock == 0) unlock = 1; else unlock = 0;
     } else if (address == 0x7f10) {
         if (value == 0xE2 && unlock == 1) unlock = 2; else unlock = 0;
     } else if (address == 0x7f20) {
-        if (value == 0xE3 && unlock == 2) { unlock = 3; } else unlock = 0;
+        if (value == 0xE3 && unlock == 2) unlock = 3; else unlock = 0;
     } else if (address == 0x7f30 && unlock == 3) {
         //"SD" commands?
         //printf("Switch SRAM MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
@@ -151,14 +151,16 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             printf("Unknown value written to MUX3: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
             break;
         }
+    } else if (address == 0x7fd0 && unlock == 3) {
+        printf("RTC update\n");
     } else if (address == 0x7fb0 && unlock == 3) {
-        image_sector_nr = value;
+        image_sector_nr = (image_sector_nr & 0xFFFFFF00) | value;
     } else if (address == 0x7fb1 && unlock == 3) {
-        image_sector_nr |= value << 8;
+        image_sector_nr = (image_sector_nr & 0xFFFF00FF) | (value << 8);
     } else if (address == 0x7fb2 && unlock == 3) {
-        image_sector_nr |= value << 16;
+        image_sector_nr = (image_sector_nr & 0xFF00FFFF) | (value << 16);
     } else if (address == 0x7fb3 && unlock == 3) {
-        image_sector_nr |= value << 24;
+        image_sector_nr = (image_sector_nr & 0x00FFFFFF) | (value << 24);
     } else if (address == 0x7fb4 && unlock == 3) {
         image_sector_count = value; // unsure, only seen value 1 so far.
         printf("Accessing SD Sector: %08x:%02x\n", image_sector_nr, image_sector_count);
