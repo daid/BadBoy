@@ -139,6 +139,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             break;
         case 2:
             //Used by the initial boot stage, reason is unknown...
+            //Used by firmware updater, reason is unknown...
             break;
         case 3:
             sram_target = SRamTarget::SRAM;
@@ -146,6 +147,21 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         case 4:
             sram_target = SRamTarget::FWVersion;
             getSRam(0).set(10);
+            break;
+        case 5:
+            //Firmware update execute?
+            for(int n=0; n<128; n++)
+            {
+                uint32_t value = 
+                    getSRam(SRamTarget::RomLoadInfo, n * 4 + 0).get() << 0 |
+                    getSRam(SRamTarget::RomLoadInfo, n * 4 + 1).get() << 8 |
+                    getSRam(SRamTarget::RomLoadInfo, n * 4 + 2).get() << 16 |
+                    getSRam(SRamTarget::RomLoadInfo, n * 4 + 3).get() << 24;
+
+                if (n % 4 == 0) printf("%02x:", n);
+                printf(" %08x", value);
+                if (n % 4 == 3) printf("\n");
+            }
             break;
         case 6:
             // This switches to RTC registers, writting to them is ignored by this implementation.
@@ -208,6 +224,17 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         {
             //Start loaded rom (should reset and apply above prepared settings)
             input.quit = true;
+
+            //Print SRAM backup info about loaded rom.
+            /*
+            for(int n=0; n<512; n++)
+            {
+                if (n % 16 == 0) printf("%04x:", n);
+                int v = card.getRawSRam(n + 0x11 * 0x2000 + sram_status * 0x2000 * 256).get();
+                printf(" %02x", v);
+                if (n % 16 == 15) printf("\n");
+            }
+            */
         }
     } else if (address == 0x7ff0) {
         if (value == 0xE4 && unlock == 3) {
