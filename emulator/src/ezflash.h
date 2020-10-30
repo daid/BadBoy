@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mbc.h"
+#include "mem8.h"
 #include <vector>
 
 class EZFlashMBC : public MBC
@@ -12,30 +13,33 @@ public:
     uint32_t mapSRam(uint16_t address) override;
     void writeRom(uint16_t address, uint8_t value) override;
     uint32_t getRomBankNr() override;
-    virtual bool sramEnabled() { return true; }
+    virtual bool sramEnabled() { return sram_target != SRamTarget::None; }
 
+    enum class SRamTarget {
+        None,
+        SDStatus,
+        SDData,
+        RomLoadStatus,
+        RTC,
+        SRAM,
+        RomLoadInfo,
+        FWVersion,
+        Unknown,
+        MAX
+    };
 private:
-    void setSRam(uint32_t bank, uint32_t addr, uint8_t data);
+
+    Mem8& getSRam(uint32_t addr) { return getSRam(sram_target, addr); }
+    Mem8& getSRam(SRamTarget target, uint32_t addr);
     void loadNewRom();
 
-    std::vector<uint8_t> image;
+    std::vector<uint8_t> sd_image;
 
     uint32_t rom_bank = 0;
-    uint32_t sram_type = 0;
+    SRamTarget sram_target = SRamTarget::None;
     uint32_t sram_bank = 0;
     int unlock = 0;
-    int command = 0;
 
     int image_sector_nr = 0;
     int image_sector_count = 0;
-
-    static constexpr uint32_t sram_normal = 0;
-    static constexpr uint32_t sram_sd_status = 1;
-    static constexpr uint32_t sram_sd_data = 2;
-    static constexpr uint32_t sram_rom_status = 3;
-    static constexpr uint32_t sram_rtc_data = 4;
-    static constexpr uint32_t sram_status = 5;
-    static constexpr uint32_t sram_sd_to_rom_data = 6;
-    static constexpr uint32_t sram_fw_version = 7;
-    static constexpr uint32_t sram_unknown = 8;
 };

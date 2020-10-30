@@ -194,7 +194,6 @@ void Card::dumpInstrumentation(FILE* f)
 
 void Card::resizeRom(size_t new_size)
 {
-    rom.reserve(256 * 0x4000);
     rom.resize(new_size);
     for(size_t n=0; n<rom.size(); n++)
         rom[n].id = n | ID_ROM;

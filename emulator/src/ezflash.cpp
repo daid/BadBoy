@@ -12,19 +12,47 @@ static int dec2bcd(int n)
     return (n % 10) | (n / 10 * 16);
 }
 
+std::array<uint32_t, int(EZFlashMBC::SRamTarget::MAX)> SRAM_OFFSET;
+std::array<uint32_t, int(EZFlashMBC::SRamTarget::MAX)> SRAM_SIZE{ // Make sure this array matches the enum!
+    0x0000, //None,
+    0x0001, //SDStatus,
+    0x0800, //SDData,
+    0x0001, //RomLoadStatus,
+    0x0100, //RTC,
+    0x40 * 0x2000, //SRAM,
+    0x2000, //RomLoadInfo: TODO check size of this,
+    0x0001, //FWVersion,
+    0x2000, //Unknown
+};
+
 
 EZFlashMBC::EZFlashMBC(const char* image_filename)
 {
     FILE* f = fopen(image_filename, "rb");
     fseek(f, 0, SEEK_END);
-    image.resize(ftell(f));
+    sd_image.resize(ftell(f));
     fseek(f, 0, SEEK_SET);
-    if (fread(image.data(), 1, image.size(), f) != image.size())
+    if (fread(sd_image.data(), 1, sd_image.size(), f) != sd_image.size())
         printf("Failed to read sd card image...\n");
     fclose(f);
 
-    // Force to have a lot of SRAM data so we can manage our data somewhat.
-    card.resizeSRam(0x2000 * 256 * 16);
+    // We resize the rom to the biggest size, to pre-allocate enough memory
+    // This is done else the instrumentation crashes due to pointer usage.
+    card.resizeRom(256 * 0x4000);
+
+    //Initialize the SRAM_OFFSET array and resize the amount of SRAM we have to account for everything we need to
+    // map to SRAM.
+    uint32_t offset = 0;
+    for(size_t n=0; n<SRAM_SIZE.size(); n++)
+    {
+        SRAM_OFFSET[n] = offset;
+        offset += SRAM_SIZE[n];
+    }
+    card.resizeSRam(offset);
+
+    //Setting this indicates that the battery is not dry.
+    // Loader sets this to 0x88 quite often when it is running.
+    getSRam(SRamTarget::SRAM, 0x11 * 0x2000 + 0x201).set(0x88);
 }
 
 uint32_t EZFlashMBC::mapRom(uint16_t address)
@@ -36,11 +64,10 @@ uint32_t EZFlashMBC::mapRom(uint16_t address)
 
 uint32_t EZFlashMBC::mapSRam(uint16_t address)
 {
-    if (sram_type == sram_rtc_data)
-        return address + sram_type * 0x2000 * 256;
-    //if (sram_type != sram_sd_data) printf("  SRAM access: %02x:%04x\n", sram_type, sram_bank, address);
-    if (sram_type == sram_unknown) printf("  SRAM access: %02x:%02x:%04x\n", sram_type, sram_bank, address);
-    return address + sram_bank * 0x2000 + sram_type * 0x2000 * 256;
+    if (sram_target == SRamTarget::SRAM)
+        address += sram_bank * 0x2000;
+    if (sram_target == SRamTarget::Unknown) printf("  SRAM access: %02x:%04x\n", int(sram_target), address);
+    return SRAM_OFFSET[int(sram_target)] + (address % SRAM_SIZE[int(sram_target)]);
 }
 
 void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
@@ -53,7 +80,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             value = 0x01;
         rom_bank = value;
     } else if (address == 0x4000) {
-        sram_bank = value;
+        sram_bank = value & 0x3F;
         printf("SRAM Bank: %02x\n", sram_bank);
     } else if (address == 0x7f00) {
         if (value == 0xE1 && unlock == 0) unlock = 1; else unlock = 0;
@@ -67,16 +94,13 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         switch(value)
         {
         case 0: //Normal SRAM?
-            sram_type = sram_normal;
+            sram_target = SRamTarget::None;
             break;
         case 1: //SD card sector data
-            sram_type = sram_sd_data;
-            for(int n=0; n<512; n++)
-                setSRam(0, n, image[n + image_sector_nr * 512]);
+            sram_target = SRamTarget::SDData;
             break;
-        case 3: // SD card command state?
-            sram_type = sram_sd_status;
-            setSRam(0, 0, 0x01);
+        case 3: // SD card command state
+            sram_target = SRamTarget::SDStatus;
             break;
         default:
             printf("Unknown value written to MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
@@ -88,18 +112,18 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         switch(value)
         {
         case 0: //Normal SRAM?
-            sram_type = sram_normal;
+            sram_target = SRamTarget::None;
             break;
         case 1:
-            sram_type = sram_sd_to_rom_data;
+            sram_target = SRamTarget::RomLoadInfo;
             break;
         case 3: // command state of ROM update?
-            if (sram_type == sram_sd_to_rom_data)
+            if (sram_target == SRamTarget::RomLoadInfo)
             {
                 loadNewRom();
             }
-            sram_type = sram_rom_status;
-            setSRam(0, 0, 0x02);
+            sram_target = SRamTarget::RomLoadStatus;
+            getSRam(SRamTarget::RomLoadStatus, 0).set(0x02);
             break;
         default:
             printf("Unknown value written to MUX2: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
@@ -111,23 +135,17 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         {
         case 0: //Switches back to normal SRAM?
             //if (sram_type == sram_status) printf("STATUS 0x201: %02x\n", card.getSRam(0x201).get());
-            sram_type = sram_normal;
+            sram_target = SRamTarget::None;
             break;
         case 2:
             //Used by the initial boot stage, reason is unknown...
             break;
         case 3:
-            sram_type = sram_status;
-            //Setting this indicates that there is SRAM to be backed up to SD card, exact workings unknown.
-            //setSRam(0x11, 0x000, 0xAA);
-
-            //Setting this indicates that the battery is not dry. (we should only do this on init)
-            // Loader sets this to 0x88 quite often when it is running.
-            setSRam(0x11, 0x201, 0x88);
+            sram_target = SRamTarget::SRAM;
             break;
         case 4:
-            sram_type = sram_fw_version;
-            setSRam(0x00, 0x000, 10);
+            sram_target = SRamTarget::FWVersion;
+            getSRam(0).set(10);
             break;
         case 6:
             // This switches to RTC registers, writting to them is ignored by this implementation.
@@ -137,14 +155,14 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
                 time (&rawtime);
                 tm* timeinfo = localtime(&rawtime);
 
-                sram_type = sram_rtc_data;
-                setSRam(0x00, 8, dec2bcd(timeinfo->tm_sec));
-                setSRam(0x00, 9, dec2bcd(timeinfo->tm_min));
-                setSRam(0x00, 10, dec2bcd(timeinfo->tm_hour));
-                setSRam(0x00, 11, dec2bcd(timeinfo->tm_mday));
-                //setSRam(0x00, 12).set(dec2bcd(timeinfo->)); ?? unknown maybe week day, need to test on hardware
-                setSRam(0x00, 13, dec2bcd(timeinfo->tm_mon + 1));
-                setSRam(0x00, 14, dec2bcd(timeinfo->tm_year % 100));
+                sram_target = SRamTarget::RTC;
+                getSRam(8).set(dec2bcd(timeinfo->tm_sec));
+                getSRam(9).set(dec2bcd(timeinfo->tm_min));
+                getSRam(10).set(dec2bcd(timeinfo->tm_hour));
+                getSRam(11).set(dec2bcd(timeinfo->tm_mday));
+                getSRam(12).set(dec2bcd(timeinfo->tm_wday));
+                getSRam(13).set(dec2bcd(timeinfo->tm_mon + 1));
+                getSRam(14).set(dec2bcd(timeinfo->tm_year % 100));
             }
             break;
         default:
@@ -164,6 +182,15 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
     } else if (address == 0x7fb4 && unlock == 3) {
         image_sector_count = value; // unsure, only seen value 1 so far.
         printf("Accessing SD Sector: %08x:%02x\n", image_sector_nr, image_sector_count);
+        if (value & 0x80)
+        {
+            for(int n=0; n<0x200 * (value & 0x03); n++)
+                sd_image[image_sector_nr * 0x200 + n] = getSRam(SRamTarget::SDData, n).get();
+        }else{
+            for(int n=0; n<0x200 * (value & 0x03); n++)
+                getSRam(SRamTarget::SDData, n).set(sd_image[image_sector_nr * 0x200 + n]);
+        }
+        getSRam(SRamTarget::SDStatus, 0).set(1);
     } else if (address == 0x7f37 && unlock == 3) {
         printf("Preparing target MBC to: %02x\n", value);
     } else if (address == 0x7fc1 && unlock == 3) {
@@ -197,9 +224,10 @@ uint32_t EZFlashMBC::getRomBankNr()
     return rom_bank;
 }
 
-void EZFlashMBC::setSRam(uint32_t bank, uint32_t address, uint8_t data)
+Mem8& EZFlashMBC::getSRam(SRamTarget target, uint32_t addr)
 {
-    card.getRawSRam(address + bank * 0x2000 + sram_type * 0x2000 * 256).set(data);
+    addr = SRAM_OFFSET[int(target)] + (addr % SRAM_SIZE[int(target)]);
+    return card.getRawSRam(addr);
 }
 
 void EZFlashMBC::loadNewRom()
@@ -210,10 +238,10 @@ void EZFlashMBC::loadNewRom()
     for(int n=0; n<128; n++)
     {
         buffer[n] = 
-            card.getRawSRam(n * 4 + 0 + sram_sd_to_rom_data * 0x2000 * 256).get() << 0 |
-            card.getRawSRam(n * 4 + 1 + sram_sd_to_rom_data * 0x2000 * 256).get() << 8 |
-            card.getRawSRam(n * 4 + 2 + sram_sd_to_rom_data * 0x2000 * 256).get() << 16 |
-            card.getRawSRam(n * 4 + 3 + sram_sd_to_rom_data * 0x2000 * 256).get() << 24;
+            getSRam(SRamTarget::RomLoadInfo, n * 4 + 0).get() << 0 |
+            getSRam(SRamTarget::RomLoadInfo, n * 4 + 1).get() << 8 |
+            getSRam(SRamTarget::RomLoadInfo, n * 4 + 2).get() << 16 |
+            getSRam(SRamTarget::RomLoadInfo, n * 4 + 3).get() << 24;
 
         if (n % 4 == 0) printf("%02x:", n);
         printf(" %08x", buffer[n]);
@@ -221,10 +249,17 @@ void EZFlashMBC::loadNewRom()
     }
     
     uint32_t rom_size = buffer[124];
+    printf("Loading new rom, size: %d\n", rom_size);
+    if (!rom_size)
+    {
+        printf("Loading empty rom, abort!\n");
+        input.quit = true;
+        return;
+    }
+
     uint32_t addr = 0;
-    //card.resizeRom(rom_size); //resizing the rom breaks instrumentation tracking crashing the emulator.
+    card.resizeRom(rom_size);
     int index = 1;
-    
     while(1)
     {
         if (addr >= rom_size)
@@ -236,8 +271,8 @@ void EZFlashMBC::loadNewRom()
         {
             if (addr >= rom_size)
                 break;
-            //for(int n=0; n<512; n++)
-            //    card.updateRom(addr+n, image[sector * 512 + n]);
+            for(int n=0; n<512; n++)
+                card.updateRom(addr+n, sd_image[sector * 512 + n]);
             addr += 512;
             sector++;
             count--;
