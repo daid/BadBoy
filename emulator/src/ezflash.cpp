@@ -65,7 +65,8 @@ uint32_t EZFlashMBC::mapRom(uint16_t address)
 uint32_t EZFlashMBC::mapSRam(uint16_t address)
 {
     if (sram_target == SRamTarget::SRAM)
-        address += sram_bank * 0x2000;
+        return SRAM_OFFSET[int(sram_target)] + ((sram_bank * 0x2000 + address) % SRAM_SIZE[int(sram_target)]);
+
     if (sram_target == SRamTarget::Unknown) printf("  SRAM access: %02x:%04x\n", int(sram_target), address);
     return SRAM_OFFSET[int(sram_target)] + (address % SRAM_SIZE[int(sram_target)]);
 }
