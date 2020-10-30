@@ -196,6 +196,8 @@ bool Video::update()
                 }
             }
         }
+        if (!(LCDC.value & 0x80))
+            memset(line_ptr, 0xFF, 160 * sizeof(uint32_t));
         SDL_UnlockSurface(backbuffer);
     }
 
