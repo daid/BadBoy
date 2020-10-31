@@ -224,6 +224,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
     } else if (address == 0x7fe0 && unlock == 3) {
         if (value == 0x80)
         {
+            printf("EZFlashJr: Reset!\n");
             //Start loaded rom (should reset and apply above prepared settings)
             cpu.reset();
 
