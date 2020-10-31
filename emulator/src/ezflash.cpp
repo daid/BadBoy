@@ -84,7 +84,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         sram_bank = value & 0x3F;
         printf("SRAM Bank: %02x\n", sram_bank);
     } else if (address == 0x7f00) {
-        if (value == 0xE1 && unlock == 0) unlock = 1; else unlock = 0;
+        if (value == 0xE1 && unlock == 0) unlock = 1; else { unlock = 0; printf("Tried to unlock while unlocked...\n"); }
     } else if (address == 0x7f10) {
         if (value == 0xE2 && unlock == 1) unlock = 2; else unlock = 0;
     } else if (address == 0x7f20) {
@@ -287,14 +287,15 @@ void EZFlashMBC::loadNewRom()
 
     uint32_t addr = 0;
     card.resizeRom(rom_size);
+    rom_bank = 0x01; // HACK, this most likely does not happen on the ezflash, but else some other buggy emulator code fails.
     int index = 1;
+
     while(1)
     {
         if (addr >= rom_size)
             break;
         uint32_t sector = buffer[index++];
         uint32_t count = buffer[index++];
-        //printf("%08x %08x\n", sector, count);
         while(count)
         {
             if (addr >= rom_size)

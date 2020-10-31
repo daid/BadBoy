@@ -1,7 +1,9 @@
 #include "card.h"
 #include "input.h"
 #include "ram.h"
+
 #include <stdio.h>
+#include <assert.h>
 
 Card card;
 
@@ -61,9 +63,8 @@ void Card::init()
 
     if (rom.size() == 0)
     {
-        uint32_t size = 0x8000;
-        rom.resize(size);
-        for(uint32_t n=0; n<size; n++)
+        rom.resize(0x8000);
+        for(uint32_t n=0; n<rom.size(); n++)
         {
             rom[n].id = n | ID_ROM;
             rom[n].value = 0xDD;
@@ -201,6 +202,7 @@ void Card::resizeRom(size_t new_size)
 
 void Card::updateRom(uint32_t address, uint8_t data)
 {
+    assert(address < rom.size());
     rom[address].value = data;
 }
 
