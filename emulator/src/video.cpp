@@ -15,6 +15,9 @@ SDL_Surface* backbuffer;
 
 void Video::init()
 {
+    if (window)
+        return;
+
     vram.resize(0x4000);
     oam.resize(0x00A0);
 

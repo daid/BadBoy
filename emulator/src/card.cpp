@@ -20,6 +20,8 @@ public:
 
     void setImpl(uint8_t value) override
     {
+        //TODO: This isn't correct in all cases. And the wrong design for ROM writes
+        //For example if bank0 is mapped to 0x4000-0x7FFF and you write to it this will think it writes to the lower area.
         if (id < 0x4000)
             card.mbc->writeRom(id, value);
         else

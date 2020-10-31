@@ -3,8 +3,47 @@
 
 #include "cpu.h"
 #include "mm.h"
+#include "card.h"
+#include "video.h"
+#include "ram.h"
+#include "audio.h"
 
 Cpu cpu;
+
+void Cpu::reset()
+{
+    card.init();
+    video.init();
+    ram.init();
+    audio.init();
+
+    for(uint32_t n=0xFF00; n<0xFF80; n++)
+        mm::get(n).id = n | ID_IO;
+    mm::get(0xFF7F).id = std::numeric_limits<uint64_t>::max();
+    mm::get(0xFFFF).id = 0xFFFF | ID_IO;
+
+    gbc = card.getRom(0x143).get() & 0x80;
+    if (card.getBoot(0).get() == 0x00)
+    {
+        //Skip the bootrom and setup the defaults as they would be after the bootrom.
+        A.set(gbc ? 0x11 : 0x01);
+        F.set(0xB0);
+        B.set(0x00);
+        C.set(0x13);
+        D.set(0x00);
+        E.set(0xD8);
+        H.set(0x01);
+        L.set(0x4D);
+        S.set(0xFF);
+        P.set(0xFE);
+        video.LCDC.set(0x91);
+        video.BGP.set(0xFC);
+        video.OBP0.set(0xFF);
+        video.OBP1.set(0xFF);
+        mm::get(0xFF50).set(0x01);
+        pc = 0x100;
+    }
+}
 
 uint16_t Cpu::getBC() const
 {

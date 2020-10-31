@@ -210,6 +210,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         getSRam(SRamTarget::SDStatus, 0).set(1);
     } else if (address == 0x7f37 && unlock == 3) {
         printf("Preparing target MBC to: %02x\n", value);
+        target_mbc = value;
     } else if (address == 0x7fc1 && unlock == 3) {
         printf("Preparing ROM mask (low) to: %02x\n", value);
     } else if (address == 0x7fc2 && unlock == 3) {
@@ -224,7 +225,29 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         if (value == 0x80)
         {
             //Start loaded rom (should reset and apply above prepared settings)
-            input.quit = true;
+            cpu.reset();
+
+            //Swap out to the proper MBC, note that this will destroy the EZFlashMBC object!
+            switch(target_mbc)
+            {
+            default:
+                printf("Warning: Do not know how to configure MBC: %02x, defaulting to no MBC.\n", target_mbc);
+            case 0x00:
+                card.mbc = std::make_unique<MBCNone>();
+                break;
+            case 0x01:
+                card.mbc = std::make_unique<MBC1>();
+                break;
+            case 0x02:
+                card.mbc = std::make_unique<MBC2>();
+                break;
+            case 0x03:
+                card.mbc = std::make_unique<MBC3>();
+                break;
+            case 0x04:
+                card.mbc = std::make_unique<MBC5>();
+                break;
+            }
 
             //Print SRAM backup info about loaded rom.
             /*

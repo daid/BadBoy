@@ -43,6 +43,9 @@ static void audioCallback(void* userdata, Uint8* raw_stream, int raw_length)
 
 void Audio::init()
 {
+    if (audio_device)
+        return;
+
     SDL_AudioSpec spec, obtained;
 
     SDL_zero(spec);

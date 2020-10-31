@@ -15,41 +15,6 @@
 #include "ezflash.h"
 
 
-static void initCore()
-{
-    card.init();
-    video.init();
-    ram.init();
-    for(uint32_t n=0xFF00; n<0xFF80; n++)
-        mm::get(n).id = n | ID_IO;
-    mm::get(0xFF7F).id = std::numeric_limits<uint64_t>::max();
-    mm::get(0xFFFF).id = 0xFFFF | ID_IO;
-
-    cpu.gbc = card.getRom(0x143).get() & 0x80;
-    if (card.getBoot(0).get() == 0x00)
-    {
-        //Skip the bootrom and setup the defaults as they would be after the bootrom.
-        cpu.A.set(cpu.gbc ? 0x11 : 0x01);
-        cpu.F.set(0xB0);
-        cpu.B.set(0x00);
-        cpu.C.set(0x13);
-        cpu.D.set(0x00);
-        cpu.E.set(0xD8);
-        cpu.H.set(0x01);
-        cpu.L.set(0x4D);
-        cpu.S.set(0xFF);
-        cpu.P.set(0xFE);
-        video.LCDC.set(0x91);
-        video.BGP.set(0xFC);
-        video.OBP0.set(0xFF);
-        video.OBP1.set(0xFF);
-        mm::get(0xFF50).set(0x01);
-        cpu.pc = 0x100;
-    }
-
-    audio.init();
-}
-
 void coreLoop()
 {
     while(!input.quit)
@@ -103,7 +68,10 @@ void coreLoop()
                 //fprintf(log, "%08d %02x:%04x %2x %02x SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.cycles, card.rom_upper_bank, cpu.pc, mm::get(cpu.pc).get(), video.LY.get(), cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
             }
             if (res.type == Opcode::ERROR)
+            {
+                printf("illegal opcode\n");
                 break;
+            }
             cpu.execute(res);
         }
         if (video.update())
@@ -152,7 +120,7 @@ int main(int argc, char** argv)
     card.load(rom_file.c_str());
     if (!replay_file.empty())
         input.setReplayFile(replay_file.c_str(), replay_playback);
-    initCore();
+    cpu.reset();
 
     if (ezflash)
         card.mbc = std::make_unique<EZFlashMBC>(ezflash);

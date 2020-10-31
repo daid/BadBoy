@@ -79,6 +79,7 @@ public:
     uint16_t getHLinc();
     uint16_t getHLdec();
 
+    void reset();
     void execute(const Opcode& opcode);
     void setInterrupt(uint8_t mask);
     void interrupt(uint16_t vector);
