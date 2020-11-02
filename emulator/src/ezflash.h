@@ -13,7 +13,7 @@ public:
     uint32_t mapSRam(uint16_t address) override;
     void writeRom(uint16_t address, uint8_t value) override;
     uint32_t getRomBankNr() override;
-    virtual bool sramEnabled() { return sram_target != SRamTarget::None; }
+    bool sramEnabled() override;
 
     enum class SRamTarget {
         None,

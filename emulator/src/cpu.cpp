@@ -40,6 +40,25 @@ void Cpu::reset()
         video.BGP.set(0xFC);
         video.OBP0.set(0xFF);
         video.OBP1.set(0xFF);
+        audio.NR10.set(0x80);
+        audio.NR11.set(0xBF);
+        audio.NR12.set(0xF3);
+        audio.NR14.set(0xBF);
+        audio.NR21.set(0x3F);
+        audio.NR22.set(0x00);
+        audio.NR24.set(0xBF);
+        audio.NR30.set(0x7F);
+        audio.NR31.set(0xFF);
+        audio.NR32.set(0x9F);
+        audio.NR43.set(0xBF);
+        audio.NR41.set(0xFF);
+        audio.NR42.set(0x00);
+        audio.NR43.set(0x00);
+        audio.NR44.set(0xBF);
+        audio.NR50.set(0x77);
+        audio.NR51.set(0xF3);
+        audio.NR52.set(0xF1);
+        audio.square_1.active = false;
         mm::get(0xFF50).set(0x01);
         pc = 0x100;
     }

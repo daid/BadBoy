@@ -71,6 +71,12 @@ uint32_t EZFlashMBC::mapSRam(uint16_t address)
     return SRAM_OFFSET[int(sram_target)] + (address % SRAM_SIZE[int(sram_target)]);
 }
 
+bool EZFlashMBC::sramEnabled()
+{
+    if (sram_target == SRamTarget::None) printf("SRAM access without SRAM mapped...\n");
+    return sram_target != SRamTarget::None;
+}
+
 void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
 {
     if (address == 0x2000)
