@@ -14,14 +14,15 @@ static int dec2bcd(int n)
 
 std::array<uint32_t, int(EZFlashMBC::SRamTarget::MAX)> SRAM_OFFSET;
 std::array<uint32_t, int(EZFlashMBC::SRamTarget::MAX)> SRAM_SIZE{ // Make sure this array matches the enum!
-    0x0000, //None,
-    0x0001, //SDStatus,
-    0x0800, //SDData,
-    0x0001, //RomLoadStatus,
-    0x0100, //RTC,
-    0x40 * 0x2000, //SRAM,
-    0x2000, //RomLoadInfo: TODO check size of this,
-    0x0001, //FWVersion,
+    0x0000, //None
+    0x0001, //SDStatus
+    0x0800, //SDData
+    0x0001, //RomLoadStatus
+    0x0100, //RTC
+    0x40 * 0x2000, //SRAM
+    0x2000, //RomLoadInfo: TODO check size of this
+    0x0001, //FWVersion
+    0x0001, //FirmwareUpdateStatus
     0x2000, //Unknown
 };
 
@@ -225,6 +226,18 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         printf("Preparing header checksum?!?: %02x\n", value);
     } else if (address == 0x7fc4 && unlock == 3) {
         printf("Preparing SRAM mask to: %02x\n", value);
+    } else if (address == 0x7fd2 && unlock == 3) { 
+        printf("Switch SRAM MUX4: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        switch(value)
+        {
+        case 0:
+            sram_target = SRamTarget::None;
+            break;
+        case 1:
+            sram_target = SRamTarget::FirmwareUpdateStatus;
+            getSRam(SRamTarget::FirmwareUpdateStatus, 0).set(0x00);
+            break;
+        }
     //} else if (address == 0x7fd4 && unlock == 3) { 
     //It seems to write $00 to this before preparing the cart for reboot, reason is unknown
     } else if (address == 0x7fe0 && unlock == 3) {

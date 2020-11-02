@@ -24,6 +24,7 @@ public:
         SRAM,
         RomLoadInfo,
         FWVersion,
+        FirmwareUpdateStatus,
         Unknown,
         MAX
     };
