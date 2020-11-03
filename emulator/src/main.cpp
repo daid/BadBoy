@@ -89,6 +89,7 @@ void usage(const char* app)
     printf("  -o <instrumentation_file>            Write an instrumentation file from this run.\n");
     printf("  -r <replay_file>                     Use the given replay file default for recording.\n");
     printf("  -p                                   Play back the replay file.\n");
+    printf("  -s <screenshot>                      Save a screenshot on exit.\n");
 }
 
 int main(int argc, char** argv)
@@ -98,9 +99,10 @@ int main(int argc, char** argv)
     std::string replay_file;
     bool replay_playback = false;
     const char* ezflash = nullptr;
+    const char* screenshot = nullptr;
 
     int c;
-    while((c = getopt(argc, argv, "-o:r:pe:")) != -1)
+    while((c = getopt(argc, argv, "-o:r:pe:s:")) != -1)
     {
         switch(c)
         {
@@ -108,6 +110,7 @@ int main(int argc, char** argv)
         case 'o': output_instrumentation_file = optarg; break;
         case 'r': replay_file = optarg; break;
         case 'p': replay_playback = true; break;
+        case 's': screenshot = optarg; break;
         case 'e': ezflash = optarg; break;
         case '?': usage(argv[0]); return 1;
         }
@@ -142,5 +145,7 @@ int main(int argc, char** argv)
             fclose(f);
         }
     }
+    if (screenshot)
+        video.screenshot(screenshot);
     return 0;
 }

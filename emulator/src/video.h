@@ -61,6 +61,7 @@ public:
     void init();
     bool update();
     void dumpInstrumentation(FILE* f);
+    void screenshot(const char* filename);
 
     Mem8& getVRam(uint16_t address);
 };

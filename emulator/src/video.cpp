@@ -327,6 +327,11 @@ void Video::ColorPaletteReg::setImpl(uint8_t value)
     palette[idx / 2] = (ir << 16) | (ig << 8) | (ib << 0);
 }
 
+void Video::screenshot(const char* filename)
+{
+    SDL_SaveBMP(backbuffer, filename);
+}
+
 void Video::dumpInstrumentation(FILE* f)
 {
     vram.dumpInstrumentation(f);
