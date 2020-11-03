@@ -8,6 +8,7 @@
 #include "audio.h"
 #include "input.h"
 #include "timer.h"
+#include "serial.h"
 
 
 class Mem8Void : public Mem8
@@ -41,8 +42,8 @@ Mem8& mm::get(uint16_t address)
         switch(address)
         {
         case 0xFF00: return input;
-        //case 0xFF01: return serial.SB;
-        //case 0xFF02: return serial.SC;
+        case 0xFF01: return serial.SB;
+        case 0xFF02: return serial.SC;
         case 0xFF04: return timer.DIV;
         case 0xFF05: return timer.TIMA;
         case 0xFF06: return timer.TMA;

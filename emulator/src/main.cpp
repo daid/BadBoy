@@ -11,6 +11,7 @@
 #include "audio.h"
 #include "input.h"
 #include "timer.h"
+#include "serial.h"
 #include "mm.h"
 #include "ezflash.h"
 
@@ -77,6 +78,7 @@ void coreLoop()
         if (video.update())
             input.update();
         timer.update();
+        serial.update();
     }
 }
 
