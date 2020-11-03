@@ -42,6 +42,6 @@ private:
     int unlock = 0;
 
     int image_sector_nr = 0;
-    int image_sector_count = 0;
+
     int target_mbc = 0;
 };

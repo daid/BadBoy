@@ -199,8 +199,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
     } else if (address == 0x7fb3 && unlock == 3) {
         image_sector_nr = (image_sector_nr & 0x00FFFFFF) | (value << 24);
     } else if (address == 0x7fb4 && unlock == 3) {
-        image_sector_count = value; // unsure, only seen value 1 so far.
-        printf("Accessing SD Sector: %08x:%02x\n", image_sector_nr, image_sector_count);
+        printf("Accessing SD Sector: %08x:%02x\n", image_sector_nr, value);
         if (value & 0x80)
         {
             //for(int n=0; n<0x200 * (value & 0x03); n++)
