@@ -29,16 +29,11 @@ std::array<uint32_t, int(EZFlashMBC::SRamTarget::MAX)> SRAM_SIZE{ // Make sure t
 
 EZFlashMBC::EZFlashMBC(const char* image_filename)
 {
-    FILE* f = fopen(image_filename, "rb");
-    fseek(f, 0, SEEK_END);
-    sd_image.resize(ftell(f));
-    fseek(f, 0, SEEK_SET);
-    if (fread(sd_image.data(), 1, sd_image.size(), f) != sd_image.size())
-        printf("Failed to read sd card image...\n");
-    fclose(f);
+    sd_image_file = fopen(image_filename, "rb");
 
     // We resize the rom to the biggest size, to pre-allocate enough memory
     // This is done else the instrumentation crashes due to pointer usage.
+    // This is a really nasty hack that depends on std::vector implementation details.
     card.resizeRom(256 * 0x4000);
 
     //Initialize the SRAM_OFFSET array and resize the amount of SRAM we have to account for everything we need to
@@ -208,11 +203,14 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         printf("Accessing SD Sector: %08x:%02x\n", image_sector_nr, image_sector_count);
         if (value & 0x80)
         {
-            for(int n=0; n<0x200 * (value & 0x03); n++)
-                sd_image[image_sector_nr * 0x200 + n] = getSRam(SRamTarget::SDData, n).get();
+            //for(int n=0; n<0x200 * (value & 0x03); n++)
+            //    sd_image[image_sector_nr * 0x200 + n] = getSRam(SRamTarget::SDData, n).get();
         }else{
-            for(int n=0; n<0x200 * (value & 0x03); n++)
-                getSRam(SRamTarget::SDData, n).set(sd_image[image_sector_nr * 0x200 + n]);
+            fseek(sd_image_file, image_sector_nr * 0x200, SEEK_SET);
+            uint8_t sd_sector[0x800];
+            size_t read_size = fread(sd_sector, 1, 0x200 * (value & 0x03), sd_image_file);
+            for(size_t n=0; n<read_size; n++)
+                getSRam(SRamTarget::SDData, n).set(sd_sector[n]);
         }
         getSRam(SRamTarget::SDStatus, 0).set(1);
     } else if (address == 0x7f37 && unlock == 3) {
@@ -343,9 +341,12 @@ void EZFlashMBC::loadNewRom()
         {
             if (addr >= rom_size)
                 break;
-            for(int n=0; n<512; n++)
-                card.updateRom(addr+n, sd_image[sector * 512 + n]);
-            addr += 512;
+            fseek(sd_image_file, sector * 0x200, SEEK_SET);
+            uint8_t sector_data[0x200];
+            fread(sector_data, 1, 0x200, sd_image_file);
+            for(int n=0; n<0x200; n++)
+                card.updateRom(addr+n, sector_data[n]);
+            addr += 0x200;
             sector++;
             count--;
         }

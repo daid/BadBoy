@@ -34,7 +34,7 @@ private:
     Mem8& getSRam(SRamTarget target, uint32_t addr);
     void loadNewRom();
 
-    std::vector<uint8_t> sd_image;
+    FILE* sd_image_file;
 
     uint32_t rom_bank = 0;
     SRamTarget sram_target = SRamTarget::None;
