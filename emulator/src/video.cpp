@@ -15,7 +15,7 @@ SDL_Surface* backbuffer;
 
 void Video::init()
 {
-    if (window)
+    if (backbuffer)
         return;
 
     vram.resize(0x4000);
@@ -23,7 +23,8 @@ void Video::init()
 
     SDL_Init(SDL_INIT_EVERYTHING);
     window = SDL_CreateWindow("BadBoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * 4, 144 * 4, SDL_WINDOW_SHOWN);
-    window_surface = SDL_GetWindowSurface(window);
+    if (window)
+        window_surface = SDL_GetWindowSurface(window);
     backbuffer = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
 
     for(uint32_t n=0; n<0x4000; n++)
@@ -221,19 +222,23 @@ bool Video::update()
     {
         frame_skip_counter = 0;
 
-        SDL_BlitScaled(backbuffer, nullptr, window_surface, nullptr);
-        SDL_UpdateWindowSurface(window);
-        uint32_t tick = SDL_GetTicks();
-        static uint32_t last_tick = 0;
-        if (input.fast_forward)
+        if (window_surface)
         {
-            last_tick = tick;
-            frame_skip_counter = input.fast_forward;
-        }else{
-            const uint32_t tick_step = 17;
-            if (tick - last_tick < tick_step)
-                SDL_Delay(tick_step - (tick - last_tick));
-            last_tick += tick_step;
+            SDL_BlitScaled(backbuffer, nullptr, window_surface, nullptr);
+            SDL_UpdateWindowSurface(window);
+
+            uint32_t tick = SDL_GetTicks();
+            static uint32_t last_tick = 0;
+            if (input.fast_forward)
+            {
+                last_tick = tick;
+                frame_skip_counter = input.fast_forward;
+            }else{
+                const uint32_t tick_step = 17;
+                if (tick - last_tick < tick_step)
+                    SDL_Delay(tick_step - (tick - last_tick));
+                last_tick += tick_step;
+            }
         }
 
         /*
@@ -243,7 +248,7 @@ bool Video::update()
         {
             static uint32_t fps_tick;
             float fps = float(frame_count) / float(SDL_GetTicks() - fps_tick) * 1000.0f;
-            printf("%f\n", fps);
+            fprintf(stderr, "%f\n", fps);
             fps_tick = SDL_GetTicks();
             frame_count = 0;
         }

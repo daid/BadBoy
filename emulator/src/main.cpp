@@ -16,7 +16,7 @@
 #include "ezflash.h"
 
 
-void coreLoop()
+void coreLoop(uint32_t max_cycles)
 {
     while(!input.quit)
     {
@@ -79,6 +79,9 @@ void coreLoop()
             input.update();
         timer.update();
         serial.update();
+
+        if (max_cycles && (cpu.cycles > max_cycles))
+            break;
     }
 }
 
@@ -90,6 +93,7 @@ void usage(const char* app)
     fprintf(stderr, "  -r <replay_file>                     Use the given replay file default for recording.\n");
     fprintf(stderr, "  -p                                   Play back the replay file.\n");
     fprintf(stderr, "  -s <screenshot>                      Save a screenshot on exit.\n");
+    fprintf(stderr, "  -c <max_cycles>                      Run for a maximum of the specificed amount of CPU cycles.\n");
 }
 
 int main(int argc, char** argv)
@@ -100,9 +104,10 @@ int main(int argc, char** argv)
     bool replay_playback = false;
     const char* ezflash = nullptr;
     const char* screenshot = nullptr;
+    uint32_t max_cycles = 0;
 
     int c;
-    while((c = getopt(argc, argv, "-o:r:pe:s:")) != -1)
+    while((c = getopt(argc, argv, "-o:r:pe:s:c:")) != -1)
     {
         switch(c)
         {
@@ -111,6 +116,7 @@ int main(int argc, char** argv)
         case 'r': replay_file = optarg; break;
         case 'p': replay_playback = true; break;
         case 's': screenshot = optarg; break;
+        case 'c': max_cycles = atoi(optarg); break;
         case 'e': ezflash = optarg; break;
         case '?': usage(argv[0]); return 1;
         }
@@ -130,7 +136,7 @@ int main(int argc, char** argv)
     if (ezflash)
         card.mbc = std::make_unique<EZFlashMBC>(ezflash);
 
-    coreLoop();
+    coreLoop(max_cycles);
     fprintf(stderr, "Done: %02x:%04x:%02x:%d\n", card.mbc->getRomBankNr(), cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
     fprintf(stderr, "SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
 
