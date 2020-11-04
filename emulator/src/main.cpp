@@ -60,7 +60,7 @@ void coreLoop()
             static bool done[0xFFFF];
             if (!done[cpu.pc])
             {
-                //printf("%08d %02x:%04x %2x %02x SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.cycles, card.rom_upper_bank, cpu.pc, mm::get(cpu.pc).get(), video.LY.get(), cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
+                //fprintf(stderr, "%08d %02x:%04x %2x %02x SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.cycles, card.rom_upper_bank, cpu.pc, mm::get(cpu.pc).get(), video.LY.get(), cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
                 done[cpu.pc] = true;
             }
             {
@@ -70,7 +70,7 @@ void coreLoop()
             }
             if (res.type == Opcode::ERROR)
             {
-                printf("illegal opcode\n");
+                fprintf(stderr, "illegal opcode\n");
                 break;
             }
             cpu.execute(res);
@@ -84,12 +84,12 @@ void coreLoop()
 
 void usage(const char* app)
 {
-    printf("Usage: %s rom.gb[c] [options]\n", app);
-    printf("Options:\n");
-    printf("  -o <instrumentation_file>            Write an instrumentation file from this run.\n");
-    printf("  -r <replay_file>                     Use the given replay file default for recording.\n");
-    printf("  -p                                   Play back the replay file.\n");
-    printf("  -s <screenshot>                      Save a screenshot on exit.\n");
+    fprintf(stderr, "Usage: %s rom.gb[c] [options]\n", app);
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -o <instrumentation_file>            Write an instrumentation file from this run.\n");
+    fprintf(stderr, "  -r <replay_file>                     Use the given replay file default for recording.\n");
+    fprintf(stderr, "  -p                                   Play back the replay file.\n");
+    fprintf(stderr, "  -s <screenshot>                      Save a screenshot on exit.\n");
 }
 
 int main(int argc, char** argv)
@@ -117,7 +117,7 @@ int main(int argc, char** argv)
     }
     if (rom_file.empty())
     {
-        printf("No rom file given\n");
+        fprintf(stderr, "No rom file given\n");
         usage(argv[0]);
         return 1;
     }
@@ -131,8 +131,8 @@ int main(int argc, char** argv)
         card.mbc = std::make_unique<EZFlashMBC>(ezflash);
 
     coreLoop();
-    printf("Done: %02x:%04x:%02x:%d\n", card.mbc->getRomBankNr(), cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
-    printf("SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
+    fprintf(stderr, "Done: %02x:%04x:%02x:%d\n", card.mbc->getRomBankNr(), cpu.pc, mm::get(cpu.pc).get(), cpu.halt);
+    fprintf(stderr, "SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
 
     if (!output_instrumentation_file.empty())
     {

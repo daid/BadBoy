@@ -63,13 +63,13 @@ uint32_t EZFlashMBC::mapSRam(uint16_t address)
     if (sram_target == SRamTarget::SRAM)
         return SRAM_OFFSET[int(sram_target)] + ((sram_bank * 0x2000 + address) % SRAM_SIZE[int(sram_target)]);
 
-    if (sram_target == SRamTarget::Unknown) printf("  SRAM access: %02x:%04x\n", int(sram_target), address);
+    if (sram_target == SRamTarget::Unknown) fprintf(stderr, "  SRAM access: %02x:%04x\n", int(sram_target), address);
     return SRAM_OFFSET[int(sram_target)] + (address % SRAM_SIZE[int(sram_target)]);
 }
 
 bool EZFlashMBC::sramEnabled()
 {
-    if (sram_target == SRamTarget::None) printf("SRAM access without SRAM mapped...\n");
+    if (sram_target == SRamTarget::None) fprintf(stderr, "SRAM access without SRAM mapped...\n");
     return sram_target != SRamTarget::None;
 }
 
@@ -84,16 +84,16 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         rom_bank = value;
     } else if (address == 0x4000) {
         sram_bank = value & 0x3F;
-        printf("SRAM Bank: %02x\n", sram_bank);
+        fprintf(stderr, "SRAM Bank: %02x\n", sram_bank);
     } else if (address == 0x7f00) {
-        if (value == 0xE1 && unlock == 0) unlock = 1; else { unlock = 0; printf("Tried to unlock while unlocked...\n"); }
+        if (value == 0xE1 && unlock == 0) unlock = 1; else { unlock = 0; fprintf(stderr, "Tried to unlock while unlocked...\n"); }
     } else if (address == 0x7f10) {
         if (value == 0xE2 && unlock == 1) unlock = 2; else unlock = 0;
     } else if (address == 0x7f20) {
         if (value == 0xE3 && unlock == 2) unlock = 3; else unlock = 0;
     } else if (address == 0x7f30 && unlock == 3) {
         //"SD" commands?
-        //printf("Switch SRAM MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        //fprintf(stderr, "Switch SRAM MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
         switch(value)
         {
         case 0: //Normal SRAM?
@@ -106,12 +106,12 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             sram_target = SRamTarget::SDStatus;
             break;
         default:
-            printf("Unknown value written to MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+            fprintf(stderr, "Unknown value written to MUX1: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
             break;
         }
     } else if (address == 0x7f36 && unlock == 3) {
         //"ROM" commands?
-        printf("Switch SRAM MUX2: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        fprintf(stderr, "Switch SRAM MUX2: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
         switch(value)
         {
         case 0: //Normal SRAM?
@@ -129,15 +129,15 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             getSRam(SRamTarget::RomLoadStatus, 0).set(0x02);
             break;
         default:
-            printf("Unknown value written to MUX2: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+            fprintf(stderr, "Unknown value written to MUX2: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
             break;
         }
     } else if (address == 0x7fc0 && unlock == 3) {
-        printf("Switch SRAM MUX3: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        fprintf(stderr, "Switch SRAM MUX3: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
         switch(value)
         {
         case 0: //Switches back to normal SRAM?
-            //if (sram_type == sram_status) printf("STATUS 0x201: %02x\n", card.getSRam(0x201).get());
+            //if (sram_type == sram_status) fprintf(stderr, "STATUS 0x201: %02x\n", card.getSRam(0x201).get());
             sram_target = SRamTarget::None;
             break;
         case 2:
@@ -161,9 +161,9 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
                     getSRam(SRamTarget::RomLoadInfo, n * 4 + 2).get() << 16 |
                     getSRam(SRamTarget::RomLoadInfo, n * 4 + 3).get() << 24;
 
-                if (n % 4 == 0) printf("%02x:", n);
-                printf(" %08x", value);
-                if (n % 4 == 3) printf("\n");
+                if (n % 4 == 0) fprintf(stderr, "%02x:", n);
+                fprintf(stderr, " %08x", value);
+                if (n % 4 == 3) fprintf(stderr, "\n");
             }
             break;
         case 6:
@@ -185,11 +185,11 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             }
             break;
         default:
-            printf("Unknown value written to MUX3: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+            fprintf(stderr, "Unknown value written to MUX3: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
             break;
         }
     } else if (address == 0x7fd0 && unlock == 3) {
-        printf("RTC update\n");
+        fprintf(stderr, "RTC update\n");
     } else if (address == 0x7fb0 && unlock == 3) {
         image_sector_nr = (image_sector_nr & 0xFFFFFF00) | value;
     } else if (address == 0x7fb1 && unlock == 3) {
@@ -199,7 +199,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
     } else if (address == 0x7fb3 && unlock == 3) {
         image_sector_nr = (image_sector_nr & 0x00FFFFFF) | (value << 24);
     } else if (address == 0x7fb4 && unlock == 3) {
-        printf("Accessing SD Sector: %08x:%02x\n", image_sector_nr, value);
+        fprintf(stderr, "Accessing SD Sector: %08x:%02x\n", image_sector_nr, value);
         if (value & 0x80)
         {
             //for(int n=0; n<0x200 * (value & 0x03); n++)
@@ -213,18 +213,18 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
         }
         getSRam(SRamTarget::SDStatus, 0).set(1);
     } else if (address == 0x7f37 && unlock == 3) {
-        printf("Preparing target MBC to: %02x\n", value);
+        fprintf(stderr, "Preparing target MBC to: %02x\n", value);
         target_mbc = value;
     } else if (address == 0x7fc1 && unlock == 3) {
-        printf("Preparing ROM mask (low) to: %02x\n", value);
+        fprintf(stderr, "Preparing ROM mask (low) to: %02x\n", value);
     } else if (address == 0x7fc2 && unlock == 3) {
-        printf("Preparing ROM mask (high) to: %02x\n", value);
+        fprintf(stderr, "Preparing ROM mask (high) to: %02x\n", value);
     } else if (address == 0x7fc3 && unlock == 3) {
-        printf("Preparing header checksum?!?: %02x\n", value);
+        fprintf(stderr, "Preparing header checksum?!?: %02x\n", value);
     } else if (address == 0x7fc4 && unlock == 3) {
-        printf("Preparing SRAM mask to: %02x\n", value);
+        fprintf(stderr, "Preparing SRAM mask to: %02x\n", value);
     } else if (address == 0x7fd2 && unlock == 3) { 
-        printf("Switch SRAM MUX4: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        fprintf(stderr, "Switch SRAM MUX4: %02x EZFlash ROM Write: %04x:%02x from %02x:%04x\n", value, address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
         switch(value)
         {
         case 0:
@@ -240,7 +240,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
     } else if (address == 0x7fe0 && unlock == 3) {
         if (value == 0x80)
         {
-            printf("EZFlashJr: Reset!\n");
+            fprintf(stderr, "EZFlashJr: Reset!\n");
             //Start loaded rom (should reset and apply above prepared settings)
             cpu.reset();
 
@@ -248,7 +248,7 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             switch(target_mbc)
             {
             default:
-                printf("Warning: Do not know how to configure MBC: %02x, defaulting to no MBC.\n", target_mbc);
+                fprintf(stderr, "Warning: Do not know how to configure MBC: %02x, defaulting to no MBC.\n", target_mbc);
             case 0x00:
                 card.mbc = std::make_unique<MBCNone>();
                 break;
@@ -270,20 +270,20 @@ void EZFlashMBC::writeRom(uint16_t address, uint8_t value)
             /*
             for(int n=0; n<512; n++)
             {
-                if (n % 16 == 0) printf("%04x:", n);
+                if (n % 16 == 0) fprintf(stderr, "%04x:", n);
                 int v = card.getRawSRam(n + 0x11 * 0x2000 + sram_status * 0x2000 * 256).get();
-                printf(" %02x", v);
-                if (n % 16 == 15) printf("\n");
+                fprintf(stderr, " %02x", v);
+                if (n % 16 == 15) fprintf(stderr, "\n");
             }
             */
         }
     } else if (address == 0x7ff0) {
         if (value == 0xE4 && unlock == 3) {
-            //printf("LOCK/EXEC?\n");
+            //fprintf(stderr, "LOCK/EXEC?\n");
         }
         unlock = 0;
     } else {
-        printf("Unknown EZFlash ROM Write: %04x:%02x from %02x:%04x\n", address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
+        fprintf(stderr, "Unknown EZFlash ROM Write: %04x:%02x from %02x:%04x\n", address, value, cpu.pc >= 0x4000 ? rom_bank : 0, cpu.pc);
     }
 }
 
@@ -311,16 +311,16 @@ void EZFlashMBC::loadNewRom()
             getSRam(SRamTarget::RomLoadInfo, n * 4 + 2).get() << 16 |
             getSRam(SRamTarget::RomLoadInfo, n * 4 + 3).get() << 24;
 
-        if (n % 4 == 0) printf("%02x:", n);
-        printf(" %08x", buffer[n]);
-        if (n % 4 == 3) printf("\n");
+        if (n % 4 == 0) fprintf(stderr, "%02x:", n);
+        fprintf(stderr, " %08x", buffer[n]);
+        if (n % 4 == 3) fprintf(stderr, "\n");
     }
     
     uint32_t rom_size = buffer[124];
-    printf("Loading new rom, size: %d\n", rom_size);
+    fprintf(stderr, "Loading new rom, size: %d\n", rom_size);
     if (!rom_size)
     {
-        printf("Loading empty rom, abort!\n");
+        fprintf(stderr, "Loading empty rom, abort!\n");
         input.quit = true;
         return;
     }

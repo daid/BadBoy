@@ -76,7 +76,7 @@ void Input::update()
             if (fread(&data, 1, 1, replay_file) < 1)
             {
                 fclose(replay_file);
-                printf("Replay playback done.\n");
+                fprintf(stderr, "Replay playback done.\n");
                 replay_file = nullptr;
                 fast_forward = 0;
             }

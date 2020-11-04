@@ -86,7 +86,7 @@ bool Card::load(const char* filename)
     FILE* f = fopen(filename, "rb");
     if (!f)
     {
-        printf("Failed to open '%s'\n", filename);
+        fprintf(stderr, "Failed to open '%s'\n", filename);
         return false;
     }
     
@@ -159,10 +159,10 @@ bool Card::load(const char* filename)
     case 4: resizeSRam(128 * 1024); break;
     case 5: resizeSRam(64 * 1024); break;
     }
-    printf("Rom header:\n");
-    printf("Card type: %02x: %s\n", rom[0x147].value, typeid(*mbc.get()).name());
-    printf("ROM Size: %dKB (%02x)\n", 32 << rom[0x148].value, rom[0x148].value);
-    printf("SRAM Size: %dKB (%02x)\n", int(sram.size()), rom[0x149].value);
+    fprintf(stderr, "Rom header:\n");
+    fprintf(stderr, "  Card type: %02x: %s\n", rom[0x147].value, typeid(*mbc.get()).name());
+    fprintf(stderr, "  ROM Size: %dKB (%02x)\n", 32 << rom[0x148].value, rom[0x148].value);
+    fprintf(stderr, "  SRAM Size: %dKB (%02x)\n", int(sram.size()), rom[0x149].value);
 
     fclose(f);
     return true;

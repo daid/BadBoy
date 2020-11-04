@@ -36,7 +36,7 @@ void Serial::SCReg::setImpl(uint8_t value)
             serial.bit_transfer_cycles = 16;
 
         //Write the serial data to stderr, allows for various logging/testing to be done.
-        write(2, &serial.data, 1);
+        write(1, &serial.data, 1);
     }
 }
 
