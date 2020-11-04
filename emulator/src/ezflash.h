@@ -36,7 +36,7 @@ private:
 
     FILE* sd_image_file;
 
-    uint32_t rom_bank = 0;
+    uint32_t rom_bank = 1;
     SRamTarget sram_target = SRamTarget::None;
     uint32_t sram_bank = 0;
     int unlock = 0;
