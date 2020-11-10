@@ -59,7 +59,7 @@ Opcode decode(uint16_t address)
     switch(op)
     {
     case 0x00: return {Opcode::NOP, 1, 4};
-    case 0x10: return {Opcode::STOP, 1, 4};
+    case 0x10: return {Opcode::STOP, 2, 4}; //2nd byte in STOP instruction is just ignored.
     case 0x20: return {Opcode::JRNZ, 2, 8, nullptr, &mm::get(address + 1)};
     case 0x30: return {Opcode::JRNC, 2, 8, nullptr, &mm::get(address + 1)};
     
