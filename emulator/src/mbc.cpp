@@ -116,7 +116,7 @@ void MBC5::writeRom(uint16_t address, uint8_t value)
     else if (address >= 0x2000 && address < 0x3000)
         rom_bank = (rom_bank & 0xFF00) | value;
     else if (address >= 0x3000 && address < 0x4000)
-        rom_bank = (rom_bank & 0x00FF) | value;
+        rom_bank = (rom_bank & 0x00FF) | (value << 8);
     else if (address >= 0x4000 && address < 0x6000)
         ram_bank = value;
 }
