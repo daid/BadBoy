@@ -56,9 +56,9 @@ class IOMemory(Memory):
         IOReg(self, 0xFF55, "rHDMA5")
         IOReg(self, 0xFF56, "rRP")
         IOReg(self, 0xFF68, "rBCPS")
-        IOReg(self, 0xFF69, "rBGPD")
+        IOReg(self, 0xFF69, "rBCPD")
         IOReg(self, 0xFF6A, "rOCPS")
-        IOReg(self, 0xFF6B, "rOBPD")
+        IOReg(self, 0xFF6B, "rOCPD")
         IOReg(self, 0xFF70, "rSVBK")
 
     def addAutoLabel(self, addr, source, type):

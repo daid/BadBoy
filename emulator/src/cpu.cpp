@@ -118,13 +118,13 @@ void Cpu::execute(const Opcode& opcode)
     {
     case Opcode::NOP: break;
     case Opcode::STOP:
-        if (cpu.gbc)
+        if (cpu.gbc && (cpu.KEY1.get() & 0x01))
         {
-            if (cpu.KEY1.get() & 0x01)
-            {
-                cpu.speed = (cpu.speed == 1) ? 2 : 1;
-                cpu.KEY1.set(cpu.speed == 1 ? 0x00 : 0x80);
-            }
+            //TODO: This should take 0x2000 cycles according to tests.
+            cpu.speed = (cpu.speed == 1) ? 2 : 1;
+            cpu.KEY1.set(cpu.speed == 1 ? 0x00 : 0x80);
+        } else {
+            //TODO: Put the system in stopped mode, not emulated yet due to limited use.
         }
         break;
     case Opcode::HALT:
