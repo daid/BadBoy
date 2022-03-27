@@ -7,7 +7,7 @@ from block.header import ROMHeader
 from block.code import CodeBlock
 from block.gfx import GfxBlock
 from sourceReader import SourceReader
-from annotation.annotation import callAnnotation
+from annotation.annotation import getAnnotation
 from autoLabel import AutoLabelLocalizer
 from annotation.simple import DataBlock
 
@@ -27,14 +27,18 @@ class Disassembler:
 
     def processRom(self):
         # First process all the annotations
+        annotations = []
         for bank in RomInfo.getRomBanks():
             for addr, comments in bank.getAllComments():
                 for comment in comments:
                     if comment.startswith("@"):
-                        callAnnotation(bank, addr, comment[1:])
+                        annotations.append(getAnnotation(bank, addr, comment[1:]))
             for addr, comment in bank.getAllInlineComments():
                 if comment.startswith("@"):
-                    callAnnotation(bank, addr, comment[1:])
+                    annotations.append(getAnnotation(bank, addr, comment[1:]))
+        annotations.sort(key=lambda a: a.priority)
+        for annotation in annotations:
+            annotation()
 
         # Next process our normal entry point, header info and interrupts.
         ROMHeader(RomInfo.romBank(0))

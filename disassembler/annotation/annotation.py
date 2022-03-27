@@ -2,12 +2,17 @@ import re
 
 ALL_ANNOTATIONS = {}
 
-def annotation(handler):
+def annotation(handler=None, *, priority=100):
+    if handler == None:
+        def f(handler):
+            annotation(handler, priority=priority)
+        return f
     assert handler.__name__ not in ALL_ANNOTATIONS
     ALL_ANNOTATIONS[handler.__name__] = handler
+    handler.priority = priority
     return handler
 
-def callAnnotation(memory, addr, comment):
+def getAnnotation(memory, addr, comment):
     kwargs = {}
     args = []
     if " " in comment:
@@ -25,4 +30,7 @@ def callAnnotation(memory, addr, comment):
     handler = ALL_ANNOTATIONS.get(handler_name)
     if not handler:
         raise NotImplementedError("Encountered annotation: [@%s] but no implementation is found" % (comment))
-    handler(memory, addr, *args, **kwargs)
+    def f():
+        handler(memory, addr, *args, **kwargs)
+    f.priority = handler.priority
+    return f

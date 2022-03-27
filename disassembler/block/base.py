@@ -22,7 +22,13 @@ class Block:
     def __len__(self):
         return self.__size
 
-    def resize(self, new_size, *, allow_fail=False):
+    def resize(self, new_size, *, allow_fail=False, allow_shrink=False):
+        if allow_shrink and new_size < self.__size:
+            assert new_size > 0
+            for n in range(new_size, self.__size):
+                self.__memory[n + self.__base_address] = None
+            self.__size = new_size
+            return True
         assert new_size >= self.__size
         if allow_fail:
             if self.__base_address + new_size > self.__memory.base_address + len(self.__memory):
@@ -48,3 +54,6 @@ class Block:
 
     def export(self, file):
         raise NotImplementedError("Export not implemented for block type: %s" % (self.__class__.__name__))
+
+    def __repr__(self):
+        return "%s@%04x" % (self.__class__.__name__, self.__base_address)

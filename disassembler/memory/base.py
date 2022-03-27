@@ -18,9 +18,13 @@ class Memory:
         return self.__blocks[index - self.base_address]
 
     def __setitem__(self, index, value):
-        # assert isinstance(value, Block)
-        assert self.__blocks[index - self.base_address] == None
-        self.__blocks[index - self.base_address] = value
+        if value is None:
+            assert self.__blocks[index - self.base_address] != None
+            self.__blocks[index - self.base_address] = value
+        else:
+            # assert isinstance(value, Block)
+            assert self.__blocks[index - self.base_address] == None, "$%04x %s %s" % (index, self.__blocks[index - self.base_address], value)
+            self.__blocks[index - self.base_address] = value
 
     def addLabel(self, addr, label):
         assert addr >= self.base_address and addr < self.base_address + len(self.__blocks)
