@@ -91,7 +91,7 @@ class Disassembler:
         for macro, contents in sorted(RomInfo.macros.items()):
             macro_file.write("%s: MACRO\n" % (macro))
             for line in contents.rstrip().split("\n"):
-                macro_file.write("    %s\n" % (line.rstrip()))
+                macro_file.write("%s\n" % (line.rstrip()))
             macro_file.write("ENDM\n")
 
         charmap_file = open(os.path.join(path, "src", "include", "charmaps.inc"), "wt")
