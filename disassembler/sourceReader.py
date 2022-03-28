@@ -11,9 +11,11 @@ class SourceReader:
         self.__comments = []
         self.__inline_comment = None
         self.__label = None
+        self.__include_start = []
+        self.__include_end_count = 0
 
     def readFile(self, filename):
-        print(filename)
+        print("Reading: ", filename)
         f = open(os.path.join(self.__base_path, filename), "rt")
         for line in f:
             if line.startswith("SECTION"):
@@ -26,12 +28,18 @@ class SourceReader:
                 line = line[:line.find(";")]
             if line.rstrip().endswith(":"):
                 self.__gotLabel(line.rstrip()[:-1])
+            if line.startswith("INCLUDE \"") and line.rstrip().endswith("\""):
+                inc = line.rstrip()[9:-1]
+                if not inc.startswith("include/"):
+                    self.__include_start.append(inc)
+                    self.readFile(os.path.join("src", inc))
+                    self.__include_end_count += 1
 
     def __setMemoryTypeFromSection(self, line):
         section_type = line.strip().split(",")[1].strip().upper()
         if "[" in section_type:
             section_type = section_type[:section_type.find("[")]
-        
+
         if section_type == "ROM0":
             self.__memory = RomInfo.romBank(0)
         elif section_type == "ROMX":
@@ -42,10 +50,16 @@ class SourceReader:
         elif section_type == "HRAM":
             self.__memory = RomInfo.getHRam()
         else:
-            raise RuntimeError("Unknown section type: %s" % (section_type))        
-    
+            raise RuntimeError("Unknown section type: %s" % (section_type))
+
     def __gotComment(self, comment):
         if comment.startswith(";"):
+            return
+        if comment.startswith("#INCEND"):
+            self.__include_end_count += 1
+            return
+        if comment.startswith("#INC"):
+            self.__include_start.append(comment[4:].strip())
             return
         if ";;" in comment:
             comment = comment[:comment.find(";;")].rstrip()
@@ -80,6 +94,13 @@ class SourceReader:
             self.__memory.addInlineComment(addr, self.__inline_comment)
         if self.__label is not None:
             self.__memory.addLabel(addr, self.__label)
+        if self.__include_start is not None:
+            for inc in self.__include_start:
+                self.__memory.startInclude(addr, inc)
+            self.__include_start = []
+        if self.__include_end_count > 0:
+            self.__memory.endInclude(addr, self.__include_end_count)
+            self.__include_end_count = 0
         self.__comments = []
         self.__inline_comment = None
         self.__label = None

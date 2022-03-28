@@ -8,6 +8,8 @@ class Memory:
         self.__comments = {}
         self.__inline_comment = {}
         self.__marks = {}
+        self.__include_start = {}
+        self.__include_end = {}
         self.base_address = base_address
         self.type = type
 
@@ -27,7 +29,7 @@ class Memory:
             self.__blocks[index - self.base_address] = value
 
     def addLabel(self, addr, label):
-        assert addr >= self.base_address and addr < self.base_address + len(self.__blocks)
+        assert addr >= self.base_address and addr < self.base_address + len(self.__blocks), "%04x: %s" % (addr, label)
         self.__labels[addr] = label
     
     def addAutoLabel(self, addr, source, type):
@@ -69,6 +71,21 @@ class Memory:
 
     def getAllInlineComments(self):
         return self.__inline_comment.items()
+
+    def startInclude(self, addr, filename):
+        if addr not in self.__include_start:
+            self.__include_start[addr] = []
+        self.__include_start[addr].append(filename)
+
+    def endInclude(self, addr, amount):
+        assert addr not in self.__include_end
+        self.__include_end[addr] = amount
+
+    def getIncludeStart(self, addr):
+        return self.__include_start.get(addr)
+
+    def getIncludeEnd(self, addr):
+        return self.__include_end.get(addr, 0)
 
     def mark(self, addr, mark):
         if addr not in self.__marks:
