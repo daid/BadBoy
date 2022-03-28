@@ -105,12 +105,16 @@ class JumpTable(Block):
             if target >= memory.base_address and target < memory.base_address + len(memory):
                 CodeBlock(memory, target)
                 memory.addAutoLabel(target, addr, "call")
+            elif target >= 0x0200 and target < 0x4000:
+                CodeBlock(RomInfo.romBank(0), target)
+                RomInfo.romBank(0).addAutoLabel(target, addr, "call")
             if not self.resize(len(self) + 2, allow_fail=amount is None):
                 break
 
     def export(self, file):
         for n in range(len(self) // 2):
-            label = self.memory.getLabel(self.memory.word(file.addr))
+            addr = self.memory.word(file.addr)
+            label = self.memory.getLabel(addr) if addr >= 0x4000 else RomInfo.romBank(0).getLabel(addr)
             if label:
                 label = str(label)
             else:
