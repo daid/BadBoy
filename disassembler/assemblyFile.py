@@ -52,7 +52,7 @@ class AssemblyFile:
     def include(self, filename):
         self.__file.write('INCLUDE "%s"\n' % (filename))
 
-    def asmLine(self, size, code, *args, is_data=False):
+    def asmLine(self, size, code, *args, is_data=False, add_data_comment=True):
         if args:
             code = "%-4s %s" % (code, ", ".join(args))
 
@@ -73,7 +73,7 @@ class AssemblyFile:
             code = "%s ;%s" % (code,inline_comment)
 
         self.__file.write("    %-50s ;; %s%04x" % (code, self.__addr_prefix, self.addr))
-        if isinstance(self.__memory, RomMemory):
+        if isinstance(self.__memory, RomMemory) and add_data_comment:
             if is_data:
                 self.__file.write(" ")
                 for n in range(size):
