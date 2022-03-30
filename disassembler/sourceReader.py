@@ -68,6 +68,8 @@ class SourceReader:
             self.__comments.append(comment)
 
     def __gotLabel(self, label):
+        if not label.startswith("."):
+            self.__prev_label = label
         if label.startswith("call_") or label.startswith("jp_") or label.startswith("jr_") or label.startswith("rst_") or label.startswith("data_"):
             return
         if label.startswith(".call_") or label.startswith(".jp_") or label.startswith(".jr_") or label.startswith(".rst_") or label.startswith(".data_"):
@@ -81,7 +83,6 @@ class SourceReader:
         if label.startswith("."):
             label = self.__prev_label.split(".")[0] + label
         self.__label = label
-        self.__prev_label = label
     
     def __gotAddressInfo(self, info):
         m = re.match(r"[0-9a-fA-F]{2}:([0-9a-fA-F]{4})", info)
