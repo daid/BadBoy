@@ -16,6 +16,7 @@ class AssemblyFile:
         self.addr = None
         self.__memory = None
         self.__addr_prefix = None
+        self.__last_label = "NONE"
 
         if memory:
             self.start(memory, addr)
@@ -47,6 +48,8 @@ class AssemblyFile:
         self.__file.write("    ;;%s\n" % (line))
     
     def label(self, label):
+        if not label.startswith("."):
+            self.__last_label = label
         self.__file.write("%s:\n" % (label))
 
     def include(self, filename):
@@ -59,6 +62,8 @@ class AssemblyFile:
         label = self.__memory.getLabel(self.addr)
         if label:
             label = str(label)
+            if "." in label and self.__last_label.split(".")[0] == label.split(".")[0]:
+                label = "." + label.split(".", 1)[1]
             if not label.startswith("."):
                 self.__file.write("\n")
         comments = self.__memory.getComments(self.addr)

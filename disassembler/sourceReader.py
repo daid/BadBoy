@@ -78,7 +78,10 @@ class SourceReader:
             return
         if re.match(r"^[hw][0-9A-F]{4}$", label):
             return
+        if label.startswith("."):
+            label = self.__prev_label.split(".")[0] + label
         self.__label = label
+        self.__prev_label = label
     
     def __gotAddressInfo(self, info):
         m = re.match(r"[0-9a-fA-F]{2}:([0-9a-fA-F]{4})", info)
