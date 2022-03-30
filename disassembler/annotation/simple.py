@@ -2,7 +2,7 @@ import re
 from annotation.annotation import annotation
 from block.base import Block
 from block.code import CodeBlock
-from block.gfx import GfxBlock
+from block.gfx import GfxBlock, GfxImageBlock
 from romInfo import RomInfo
 
 
@@ -29,6 +29,10 @@ def string(memory, addr, *, size=None):
 @annotation
 def gfx(memory, addr):
     GfxBlock(memory, addr, bpp=2, size=8)
+
+@annotation
+def gfximg(memory, addr, name, width, height):
+    GfxImageBlock(memory, addr, name=name, width=int(width), height=int(height))
 
 @annotation
 def jumptablefunction(memory, addr):

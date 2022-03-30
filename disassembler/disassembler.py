@@ -81,9 +81,9 @@ class Disassembler:
         objfiles = []
         for bank in RomInfo.getRomBanks():
             print("Processing bank: %d" % (bank.bankNumber))
-            self.__exportRomBank(path, AssemblyFile(os.path.join(path, "src", "bank%02X.asm" % (bank.bankNumber)), bank), bank)
+            self.__exportRomBank(AssemblyFile(path, os.path.join("src", "bank%02X.asm" % (bank.bankNumber)), bank), bank)
         
-        f = AssemblyFile(os.path.join(path, "src", "memory.asm"))
+        f = AssemblyFile(path, os.path.join("src", "memory.asm"))
         self.__exportRam(f, RomInfo.getWRam())
         self.__exportRam(f, RomInfo.getHRam())
         
@@ -103,7 +103,7 @@ class Disassembler:
             for key, value in sorted(data.items()):
                 charmap_file.write("CHARMAP \"%s\", %d\n" % (value, key))
 
-    def __exportRomBank(self, path, file, bank):
+    def __exportRomBank(self, file, bank):
         bank_len = len(bank)
         bank_end = bank.base_address + bank_len
         file_stack = []
@@ -116,7 +116,7 @@ class Disassembler:
                 for inc in inc_start:
                     file.include(inc)
                     file_stack.append(file)
-                    file = AssemblyFile(os.path.join(path, "src", inc), bank, addr=file.addr)
+                    file = AssemblyFile(file.basepath, os.path.join("src", inc), bank, addr=file.addr)
             if bank[file.addr]:
                 addr = file.addr
                 bank[file.addr].export(file)

@@ -4,9 +4,10 @@ from memory.ram import WRamMemory
 
 
 class AssemblyFile:
-    def __init__(self, filename, memory=None, *, addr=None):
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        self.__file = open(filename, "wt")
+    def __init__(self, basepath, filename, memory=None, *, addr=None):
+        fullfilename = os.path.join(basepath, filename)
+        os.makedirs(os.path.dirname(fullfilename), exist_ok=True)
+        self.__file = open(fullfilename, "wt")
         self.__file.write(";; Disassembled with BadBoy Disassembler: https://github.com/daid/BadBoy\n")
         self.__file.write("\n")
         if addr is None:
@@ -17,6 +18,7 @@ class AssemblyFile:
         self.__memory = None
         self.__addr_prefix = None
         self.__last_label = "NONE"
+        self.basepath = basepath
 
         if memory:
             self.start(memory, addr)
