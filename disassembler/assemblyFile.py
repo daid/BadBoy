@@ -29,7 +29,7 @@ class AssemblyFile:
         else:
             self.__addr_prefix = ""
 
-    def startSection(self, *, memory=None, addr=None):
+    def startSection(self, *, memory=None, addr=None, sectionname=None):
         if memory is not None:
             self.setMemory(memory)
         if addr is None:
@@ -39,9 +39,10 @@ class AssemblyFile:
 
         self.__file.write("\n")
         if isinstance(self.__memory, RomMemory):
-            sectionname = "bank%02x" % (self.__memory.bankNumber)
-            if self.addr != self.__memory.base_address:
-                sectionname = "%s_%04x" % (sectionname, self.addr)
+            if sectionname is None:
+                sectionname = "bank%02x" % (self.__memory.bankNumber)
+                if self.addr != self.__memory.base_address:
+                    sectionname = "%s_%04x" % (sectionname, self.addr)
             if self.__memory.bankNumber == 0:
                 self.__file.write("SECTION \"%s\", ROM0[$%04x]\n" % (sectionname, self.addr))
             else:
@@ -70,8 +71,9 @@ class AssemblyFile:
         if args:
             code = "%-4s %s" % (code, ", ".join(args))
 
-        if self.__memory.isSectionStart(self.addr):
-            self.startSection(addr=self.addr)
+        section = self.__memory.getSectionStart(self.addr)
+        if section is not None:
+            self.startSection(addr=self.addr, sectionname=section)
 
         label = self.__memory.getLabel(self.addr)
         if label:

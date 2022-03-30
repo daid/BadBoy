@@ -43,14 +43,15 @@ class Disassembler:
         # Next process our normal entry point, header info and interrupts.
         ROMHeader(RomInfo.romBank(0))
         if RomInfo.romBank(0)[0x0100] is None:
-            NoExport00(RomInfo.romBank(0), addr)
-            RomInfo.romBank(0).addSectionStart(addr)
+            NoExport00(RomInfo.romBank(0), 0x100)
+            RomInfo.romBank(0).addSectionStart(0x100, "entry")
             CodeBlock(RomInfo.romBank(0), 0x0100).addLabel(0x0100, "entry")
+            RomInfo.romBank(0).addSectionStart(0x150, "bank00_0150")
 
         for addr, name in [(0x0040, "isrVBlank"), (0x0048, "isrLCDC"), (0x0050, "isrTimer"), (0x0058, "isrSerial"), (0x0060, "isrJoypad")]:
             if RomInfo.memoryAt(addr).byte(addr) not in (0x00, 0xff) and RomInfo.memoryAt(addr)[addr] == None:
                 NoExport00(RomInfo.romBank(0), addr)
-                RomInfo.romBank(0).addSectionStart(addr)
+                RomInfo.romBank(0).addSectionStart(addr, name)
                 CodeBlock(RomInfo.romBank(0), addr).addLabel(addr, name)
 
         # Finally, for any data that has no blocks on it, see if we have marks from instrumentation that can decode it
