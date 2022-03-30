@@ -105,7 +105,7 @@ class JumpTable(Block):
             if target >= memory.base_address and target < memory.base_address + len(memory):
                 CodeBlock(memory, target)
                 memory.addAutoLabel(target, addr, "call")
-            elif target >= 0x0200 and target < 0x4000:
+            elif target >= 0x0100 and target < 0x4000:
                 CodeBlock(RomInfo.romBank(0), target)
                 RomInfo.romBank(0).addAutoLabel(target, addr, "call")
             if not self.resize(len(self) + 2, allow_fail=amount is None):
