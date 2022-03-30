@@ -10,6 +10,7 @@ class Memory:
         self.__marks = {}
         self.__include_start = {}
         self.__include_end = {}
+        self.__section_starts = set()
         self.base_address = base_address
         self.type = type
 
@@ -86,6 +87,12 @@ class Memory:
 
     def getIncludeEnd(self, addr):
         return self.__include_end.get(addr, 0)
+
+    def addSectionStart(self, addr):
+        self.__section_starts.add(addr)
+
+    def isSectionStart(self, addr):
+        return addr in self.__section_starts
 
     def mark(self, addr, mark):
         if addr not in self.__marks:

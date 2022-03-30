@@ -3,7 +3,7 @@ import shutil
 
 from romInfo import RomInfo
 from assemblyFile import AssemblyFile
-from block.header import ROMHeader
+from block.header import ROMHeader, NoExport00
 from block.code import CodeBlock
 from block.gfx import GfxBlock
 from sourceReader import SourceReader
@@ -43,10 +43,14 @@ class Disassembler:
         # Next process our normal entry point, header info and interrupts.
         ROMHeader(RomInfo.romBank(0))
         if RomInfo.romBank(0)[0x0100] is None:
+            NoExport00(RomInfo.romBank(0), addr)
+            RomInfo.romBank(0).addSectionStart(addr)
             CodeBlock(RomInfo.romBank(0), 0x0100).addLabel(0x0100, "entry")
 
         for addr, name in [(0x0040, "isrVBlank"), (0x0048, "isrLCDC"), (0x0050, "isrTimer"), (0x0058, "isrSerial"), (0x0060, "isrJoypad")]:
             if RomInfo.memoryAt(addr).byte(addr) not in (0x00, 0xff) and RomInfo.memoryAt(addr)[addr] == None:
+                NoExport00(RomInfo.romBank(0), addr)
+                RomInfo.romBank(0).addSectionStart(addr)
                 CodeBlock(RomInfo.romBank(0), addr).addLabel(addr, name)
 
         # Finally, for any data that has no blocks on it, see if we have marks from instrumentation that can decode it
@@ -69,6 +73,7 @@ class Disassembler:
                         DataBlock(bank, addr, format="p", amount=1)
                     elif bank.hasMark(addr, "WORD_LOW") and bank.hasMark(addr + 1, "WORD_HIGH"):
                         DataBlock(bank, addr, format="w", amount=1)
+            NoExport00(bank, bank.base_address + len(bank))
 
     def export(self, path):
         for bank in RomInfo.getRomBanks():
@@ -81,7 +86,9 @@ class Disassembler:
         objfiles = []
         for bank in RomInfo.getRomBanks():
             print("Processing bank: %d" % (bank.bankNumber))
-            self.__exportRomBank(AssemblyFile(path, os.path.join("src", "bank%02X.asm" % (bank.bankNumber)), bank), bank)
+            file = AssemblyFile(path, os.path.join("src", "bank%02X.asm" % (bank.bankNumber)), bank)
+            file.startSection()
+            self.__exportRomBank(file, bank)
         
         f = AssemblyFile(path, os.path.join("src", "memory.asm"))
         self.__exportRam(f, RomInfo.getWRam())
@@ -128,7 +135,7 @@ class Disassembler:
                 file.dataLine(size)
 
     def __exportRam(self, file, memory):
-        file.start(memory)
+        file.startSection(memory=memory)
         memory_end = memory.base_address + len(memory)
         while file.addr < memory_end:
             size = 1

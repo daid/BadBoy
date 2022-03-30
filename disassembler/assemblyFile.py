@@ -14,34 +14,43 @@ class AssemblyFile:
             self.__file.write("INCLUDE \"include/hardware.inc\"\n")
             self.__file.write("INCLUDE \"include/macros.inc\"\n")
             self.__file.write("INCLUDE \"include/charmaps.inc\"\n")
-        self.addr = None
+        self.addr = addr
         self.__memory = None
         self.__addr_prefix = None
         self.__last_label = "NONE"
         self.basepath = basepath
+        if memory is not None:
+            self.setMemory(memory)
 
-        if memory:
-            self.start(memory, addr)
-
-    def start(self, memory, addr=None):
-        self.__file.write("\n")
-        if isinstance(memory, RomMemory):
-            if addr is None:
-                if memory.bankNumber == 0:
-                    self.__file.write("SECTION \"bank00\", ROM0[$0000]\n")
-                else:
-                    self.__file.write("SECTION \"bank%02x\", ROMX[$4000], BANK[$%02x]\n" % (memory.bankNumber, memory.bankNumber))
-            self.__addr_prefix = "%02x:" % (memory.bankNumber)
+    def setMemory(self, memory):
+        self.__memory = memory
+        if isinstance(self.__memory, RomMemory):
+            self.__addr_prefix = "%02x:" % (self.__memory.bankNumber)
         else:
-            if addr is None:
-                self.__file.write("SECTION \"%s\", %s[$%04x]\n" % (memory.type.lower(), memory.type.upper(), memory.base_address))
             self.__addr_prefix = ""
 
+    def startSection(self, *, memory=None, addr=None):
+        if memory is not None:
+            self.setMemory(memory)
         if addr is None:
-            self.addr = memory.base_address
+            self.addr = self.__memory.base_address
         else:
             self.addr = addr
-        self.__memory = memory
+
+        self.__file.write("\n")
+        if isinstance(self.__memory, RomMemory):
+            sectionname = "bank%02x" % (self.__memory.bankNumber)
+            if self.addr != self.__memory.base_address:
+                sectionname = "%s_%04x" % (sectionname, self.addr)
+            if self.__memory.bankNumber == 0:
+                self.__file.write("SECTION \"%s\", ROM0[$%04x]\n" % (sectionname, self.addr))
+            else:
+                self.__file.write("SECTION \"%s\", ROMX[$%04x], BANK[$%02x]\n" % (sectionname, self.addr, self.__memory.bankNumber))
+            self.__addr_prefix = "%02x:" % (self.__memory.bankNumber)
+        else:
+            if addr is None:
+                self.__file.write("SECTION \"%s\", %s[$%04x]\n" % (self.__memory.type.lower(), self.__memory.type.upper(), self.__memory.base_address))
+            self.__addr_prefix = ""
 
     def newline(self):
         self.__file.write("\n")
@@ -55,11 +64,14 @@ class AssemblyFile:
         self.__file.write("%s:\n" % (label))
 
     def include(self, filename):
-        self.__file.write('INCLUDE "%s"\n' % (filename))
+        self.__file.write('\nINCLUDE "%s"\n' % (filename))
 
     def asmLine(self, size, code, *args, is_data=False, add_data_comment=True):
         if args:
             code = "%-4s %s" % (code, ", ".join(args))
+
+        if self.__memory.isSectionStart(self.addr):
+            self.startSection(addr=self.addr)
 
         label = self.__memory.getLabel(self.addr)
         if label:
