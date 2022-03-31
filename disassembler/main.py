@@ -1,10 +1,13 @@
 import argparse
+import importlib.util
+import os
 
 from rom import ROM
 from disassembler import Disassembler
 from instrumentation import processInstrumentation
 from annotation import simple
 from annotation import sdcc
+
 
 
 if __name__ == "__main__":
@@ -17,7 +20,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     for plugin in args.plugin:
-        exec(open(plugin, "rt").read())
+        if os.path.isdir(plugin):
+            for f in sorted(os.listdir(plugin)):
+                if f.endswith(".py"):
+                    f = os.path.join(plugin, f)
+                    spec = importlib.util.spec_from_file_location("plugin", f)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+        else:
+            spec = importlib.util.spec_from_file_location("plugin", plugin)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
 
     rom = ROM(args.rom)
     disassembler = Disassembler(rom)
