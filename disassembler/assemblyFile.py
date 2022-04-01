@@ -98,7 +98,15 @@ class AssemblyFile:
             if is_data:
                 self.__file.write(" ")
                 for n in range(size):
-                    if self.__memory.hasMark(self.addr+n, "DATA"):
+                    if self.__memory.hasMark(self.addr+n, "PTR_LOW"):
+                        self.__file.write("p")
+                    elif self.__memory.hasMark(self.addr+n, "PTR_HIGH"):
+                        self.__file.write("P")
+                    elif self.__memory.hasMark(self.addr+n, "WORD_LOW"):
+                        self.__file.write("w")
+                    elif self.__memory.hasMark(self.addr+n, "WORD_HIGH"):
+                        self.__file.write("W")
+                    elif self.__memory.hasMark(self.addr+n, "DATA"):
                         self.__file.write(".")
                     else:
                         self.__file.write("?")

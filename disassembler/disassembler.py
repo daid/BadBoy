@@ -26,6 +26,7 @@ class Disassembler:
                 SourceReader(path).readFile(os.path.join("src", filename))
 
     def processRom(self):
+        print("Processing rom...")
         # First process all the annotations
         annotations = []
         for bank in RomInfo.getRomBanks():
@@ -86,7 +87,7 @@ class Disassembler:
 
         objfiles = []
         for bank in RomInfo.getRomBanks():
-            print("Processing bank: %d" % (bank.bankNumber))
+            print("Exporting bank: %02x" % (bank.bankNumber))
             file = AssemblyFile(path, os.path.join("src", "bank%02X.asm" % (bank.bankNumber)), bank)
             file.startSection()
             self.__exportRomBank(file, bank)
