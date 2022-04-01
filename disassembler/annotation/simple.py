@@ -90,11 +90,14 @@ class DataBlock(Block):
                     params.append("$%04x" % self.memory.word(file.addr + size))
                     size += 2
                 elif f == "p":
-                    label = self.memory.getLabel(self.memory.word(file.addr + size))
+                    addr = self.memory.word(file.addr + size)
+                    label = self.memory.getLabel(addr)
                     if label:
                         label = str(label)
                     else:
-                        label = "$%04x" % self.memory.word(file.addr + size)
+                        label = RomInfo.getLabelAt(addr)
+                        if not label:
+                            label = "$%04x" % addr
                     params.append(label)
                     size += 2
             file.asmLine(size, self.__code, *params, is_data=True)
