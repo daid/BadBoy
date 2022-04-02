@@ -94,10 +94,14 @@ class DataBlock(Block):
                     label = self.memory.getLabel(addr)
                     if label:
                         label = str(label)
-                    else:
+                    elif addr >= 0x100:
                         label = RomInfo.getLabelAt(addr)
                         if not label:
                             label = "$%04x" % addr
+                        else:
+                            label = str(label)
+                    else:
+                        label = "$%04x" % addr
                     params.append(label)
                     size += 2
             file.asmLine(size, self.__code, *params, is_data=True)
