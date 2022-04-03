@@ -35,6 +35,22 @@ class AutoLabel:
         return "%s_%02x_%04x" % (prefix, self.memory.bankNumber, self.address)
 
 
+# Label that is an offset to a real label.
+class RelativeLabel:
+    def __init__(self, memory, address, target):
+        self.memory = memory
+        self.address = address
+        self.target = target
+        
+        memory.addLabel(address, self)
+
+    def __str__(self):
+        label = str(self.memory.getLabel(self.target))
+        offset = self.address - self.target
+        if offset < 0:
+            return "%s - %d" % (label, -offset)
+        return "%s + %d" % (label, offset)
+
 class AutoLabelLocalizer:
     def __init__(self, memory):
         self.__memory = memory
