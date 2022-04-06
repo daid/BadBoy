@@ -105,12 +105,11 @@ class Disassembler:
 
         charmap_file = open(os.path.join(path, "src", "include", "charmaps.inc"), "wt")
         for name, data in sorted(RomInfo.charmap.items()):
-            if name == "main":
-                charmap_file.write("SETCHARMAP %s\n" % (name))
-            else:
-                charmap_file.write("NEWCHARMAP %s\n" % (name))
+            charmap_file.write("PUSHC\n")
+            charmap_file.write("NEWCHARMAP %s\n" % (name))
             for key, value in sorted(data.items()):
                 charmap_file.write("CHARMAP \"%s\", %d\n" % (value, key))
+            charmap_file.write("POPC\n")
 
     def __exportRomBank(self, file, bank):
         bank_len = len(bank)

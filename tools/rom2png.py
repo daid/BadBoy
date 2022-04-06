@@ -39,10 +39,10 @@ if __name__ == "__main__":
     draw = PIL.ImageDraw.Draw(img)
     img.putpalette([0xc4,0xf0,0xc2, 0x5a,0xb9,0xa8, 0x1e,0x60,0x6e, 0x2d,0x1b,0x00, 0x00,0x00,0x00, 0xFF,0xFF,0xFF])
     draw.rectangle(((0,0), img.size), 4)
-    for addr in range(0, 0x8001, 0x0800):
-        y = addr * 512 // 0x8000 + 16
-        draw.text((3, y - 10), "%04X" % (addr), 5)
-        draw.text((bank_count * 136 + 32, y - 10), "%04X" % (addr), 5)
+    for addr in range(0, 0x4001, 0x0400):
+        y = addr * 512 // 0x4000 + 16
+        draw.text((3, y - 10), "%04X" % (addr + 0x4000), 5)
+        draw.text((bank_count * 136 + 32, y - 10), "%04X" % (addr + 0x4000), 5)
         draw.line((0, y, img.size[0], y), 5)
     for bank_nr in range(bank_count):
         draw.text((64 + 16 + bank_nr * 136, 0), "Bank%02X" % (bank_nr), 5)
