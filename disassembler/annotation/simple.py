@@ -4,6 +4,7 @@ from block.base import Block
 from block.code import CodeBlock
 from block.gfx import GfxBlock, GfxImageBlock
 from romInfo import RomInfo
+from autoLabel import RelativeLabel
 
 
 @annotation
@@ -19,8 +20,9 @@ def jumptable(memory, addr, *, amount=None, label=None):
     JumpTable(memory, addr, amount=int(amount) if amount is not None else None)
 
 @annotation
-def bank(memory, addr, bank_nr):
-    memory.setActiveRomBankAt(addr, int(bank_nr))
+def bank(memory, addr, bank_nr, size=1):
+    for n in range(int(size)):
+        memory.setActiveRomBankAt(addr + n, int(bank_nr))
 
 @annotation
 def string(memory, addr, *, size=None):
@@ -32,7 +34,11 @@ def gfx(memory, addr):
 
 @annotation
 def gfximg(memory, addr, name, width, height):
-    GfxImageBlock(memory, addr, name=name, width=int(width), height=int(height))
+    width = int(width)
+    height = int(height)
+    GfxImageBlock(memory, addr, name=name, width=width, height=height)
+    for n in range(16, width*height*16, 16):
+        RelativeLabel(memory, addr + n, addr)
 
 @annotation
 def jumptablefunction(memory, addr):
@@ -95,7 +101,7 @@ class DataBlock(Block):
                     if label:
                         label = str(label)
                     elif addr >= 0x100:
-                        label = RomInfo.getLabelAt(addr)
+                        label = RomInfo.getLabelAt(addr, RomInfo.romBank(self.memory.activeRomBankAt(file.addr + size)))
                         if not label:
                             label = "$%04x" % addr
                         else:

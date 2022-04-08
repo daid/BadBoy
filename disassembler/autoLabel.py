@@ -48,8 +48,8 @@ class RelativeLabel:
         label = str(self.memory.getLabel(self.target))
         offset = self.address - self.target
         if offset < 0:
-            return "%s - %d" % (label, -offset)
-        return "%s + %d" % (label, offset)
+            return "%s - $%02x" % (label, -offset)
+        return "%s + $%02x" % (label, offset)
 
 class AutoLabelLocalizer:
     def __init__(self, memory):
