@@ -42,7 +42,8 @@ class CodeBlock(Block):
                 if other_memory:
                     other_block = other_memory[target]
                     if other_block == None:
-                        other_block = CodeBlock(other_memory, target)
+                        CodeBlock(other_memory, target)
+                        other_block = other_memory[target]
                     elif isinstance(other_block, CodeBlock):
                         if instr.type in (CALL, RST):
                             other_block.onCall(self.memory, address - instr.size, address)

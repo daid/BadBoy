@@ -24,7 +24,7 @@ class Block:
 
     def resize(self, new_size, *, allow_fail=False, allow_shrink=False):
         if allow_shrink and new_size < self.__size:
-            assert new_size > 0
+            assert new_size >= 0
             for n in range(new_size, self.__size):
                 self.__memory[n + self.__base_address] = None
             self.__size = new_size
