@@ -111,6 +111,12 @@ class Disassembler:
                 charmap_file.write("CHARMAP \"%s\", %d\n" % (value, key))
             charmap_file.write("POPC\n")
 
+        constants_file = open(os.path.join(path, "src", "include", "constants.inc"), "wt")
+        for name, group in RomInfo.constants.items():
+            constants_file.write(";;Constants: %s\n" % (name))
+            for name, value in group.items():
+                constants_file.write("DEF %s = $%02x\n" % (name, value))
+
     def __exportRomBank(self, file, bank):
         bank_len = len(bank)
         bank_end = bank.base_address + bank_len

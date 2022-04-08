@@ -27,7 +27,7 @@ class RomInfo:
             "short_stop": "db $10",
         }
         self.charmap = {}
-
+        self.constants = {}
 
     @classmethod
     def romBank(self, index):
