@@ -113,6 +113,12 @@ class CodeBlock(Block):
     def formatAsAddressOrLabel(self, target, source_addr):
         label = RomInfo.getLabelAt(target, RomInfo.romBank(self.memory.activeRomBankAt(source_addr)))
         if label:
+            label = str(label)
+            dot = label.find(".")
+            if dot > 0:
+                prefix = label[:dot]
+                if str(self.memory.getLabelBefore(source_addr)) == prefix:
+                    return label[dot:]
             return label
         return "$%04x" % (target)
 

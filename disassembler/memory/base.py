@@ -49,6 +49,11 @@ class Memory:
 
     def getLabel(self, addr):
         return self.__labels.get(addr, None)
+    
+    def getLabelBefore(self, addr):
+        while addr >= 0 and (addr not in self.__labels or self.__labels[addr] == False):
+            addr -= 1
+        return self.__labels.get(addr, None)
 
     def getAllLabels(self):
         return self.__labels.items()
