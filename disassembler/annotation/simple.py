@@ -119,7 +119,7 @@ class JumpTable(Block):
 
         for n in range(amount if amount is not None else 0x2000):
             target = memory.word(addr + len(self))
-            if target >= memory.base_address and target < memory.base_address + len(memory):
+            if target >= memory.base_address and target < memory.base_address + len(memory) and target != 0x0000:
                 CodeBlock(memory, target)
                 memory.addAutoLabel(target, addr, "call")
             elif target >= 0x0100 and target < 0x4000:
