@@ -47,6 +47,8 @@ class SourceReader:
             self.__memory = RomInfo.romBank(bank_nr)
         elif section_type == "WRAM0":
             self.__memory = RomInfo.getWRam()
+        elif section_type == "SRAM":
+            self.__memory = RomInfo.getSRam()
         elif section_type == "HRAM":
             self.__memory = RomInfo.getHRam()
         else:
@@ -78,7 +80,7 @@ class SourceReader:
             return
         if label.startswith("unknown_") or label.startswith(".unknown_"):
             return
-        if re.match(r"^[hw][0-9A-F]{4}$", label):
+        if re.match(r"^[hws][0-9A-F]{4}$", label):
             return
         if label.startswith("."):
             label = self.__prev_label.split(".")[0] + label

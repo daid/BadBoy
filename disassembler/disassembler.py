@@ -95,6 +95,7 @@ class Disassembler:
         f = AssemblyFile(path, os.path.join("src", "memory.asm"))
         self.__exportRam(f, RomInfo.getWRam())
         self.__exportRam(f, RomInfo.getHRam())
+        self.__exportRam(f, RomInfo.getSRam())
         
         macro_file = open(os.path.join(path, "src", "include", "macros.inc"), "wt")
         for macro, contents in sorted(RomInfo.macros.items()):

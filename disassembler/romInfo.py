@@ -46,6 +46,10 @@ class RomInfo:
         return self.__hram
 
     @classmethod
+    def getSRam(self):
+        return self.__sram
+
+    @classmethod
     def memoryAt(self, addr, active_rom_bank=None):
         if addr < 0x4000:
             return self.__rom_banks[0]

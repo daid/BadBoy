@@ -61,6 +61,8 @@ class CodeBlock(Block):
             elif instr.p0 in (BC, DE, HL) and isinstance(instr.p1, int):
                 if 0x4000 <= instr.p1 < 0x8000 and memory.bankNumber > 0: # Banked ROM
                     RomInfo.memoryAt(instr.p1, memory).addAutoLabel(instr.p1, address, "data")
+                elif 0xA000 <= instr.p1 < 0xC000: # SRAM
+                    RomInfo.memoryAt(instr.p1).addAutoLabel(instr.p1, address, "data")
                 elif 0xC000 <= instr.p1 < 0xE000: # WRAM
                     RomInfo.memoryAt(instr.p1).addAutoLabel(instr.p1, address, "data")
                 elif 0xFF80 <= instr.p1 < 0xFFFF: # HRAM
