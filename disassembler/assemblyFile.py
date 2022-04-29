@@ -68,7 +68,7 @@ class AssemblyFile:
     def include(self, filename):
         self.__file.write('\nINCLUDE "%s"\n' % (filename))
 
-    def asmLine(self, size, code, *args, is_data=False, add_data_comment=True):
+    def asmLine(self, size, code, *args, is_data=False, add_data_comment=True, comment=None):
         if args:
             code = "%-4s %s" % (code, ", ".join(args))
 
@@ -85,8 +85,8 @@ class AssemblyFile:
                 self.__file.write("\n")
         comments = self.__memory.getComments(self.addr)
         if comments:
-            for comment in comments:
-                self.__file.write(";%s\n" % (comment))
+            for c in comments:
+                self.__file.write(";%s\n" % (c))
         if label:
             self.label(label)
 
@@ -118,6 +118,8 @@ class AssemblyFile:
                 #    s = self.info.classifyData(address+n)
                 #    if s:
                 #        output.write(" %s" % (s))
+        if comment is not None:
+            self.__file.write(" %s" % (comment))
         self.__file.write("\n")
         self.addr += size
 
