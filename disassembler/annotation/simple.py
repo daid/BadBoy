@@ -82,7 +82,11 @@ class DataBlock(Block):
                     if target >= memory.base_address and target < memory.base_address + len(memory):
                         memory.addAutoLabel(target, addr, "data")
                     size += 2
+            if n == 0:
+                for offset in range(1, size):
+                    RelativeLabel(memory, addr + len(self) + offset, addr)
             self.resize(len(self) + size)
+
 
     def export(self, file):
         for n in range(self.__amount):
