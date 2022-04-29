@@ -110,7 +110,7 @@ class DataBlock(Block):
                         label = "$%04x" % addr
                     params.append(label)
                     size += 2
-            file.asmLine(size, self.__code, *params, is_data=True)
+            file.asmLine(size, self.__code, *params, is_data=True, comment=("$%02x" % (n)) if self.__amount > 1 else None)
 
 
 class JumpTable(Block):
