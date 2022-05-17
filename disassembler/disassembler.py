@@ -88,7 +88,7 @@ class Disassembler:
         objfiles = []
         for bank in RomInfo.getRomBanks():
             print("Exporting bank: %02x" % (bank.bankNumber))
-            file = AssemblyFile(path, os.path.join("src", "bank%02X.asm" % (bank.bankNumber)), bank)
+            file = AssemblyFile(path, bank.main_filename, bank)
             file.startSection()
             self.__exportRomBank(file, bank)
         

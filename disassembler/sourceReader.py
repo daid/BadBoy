@@ -20,6 +20,8 @@ class SourceReader:
         for line in f:
             if line.startswith("SECTION"):
                 self.__setMemoryTypeFromSection(line)
+                if self.__memory:
+                    self.__memory.main_filename = filename
             if ";" in line:
                 self.__gotComment(line[line.find(";")+1:].rstrip())
             if ";;" in line:

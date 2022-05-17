@@ -7,6 +7,7 @@ class RomMemory(Memory):
         self.__bank = bank
         self.__rom = rom
         self.__active_rom_bank_per_addr = {}
+        self.main_filename = "src/bank%02X.asm" % (bank)
 
     @property
     def bankNumber(self):
