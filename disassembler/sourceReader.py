@@ -53,6 +53,8 @@ class SourceReader:
             self.__memory = RomInfo.getSRam()
         elif section_type == "HRAM":
             self.__memory = RomInfo.getHRam()
+        elif section_type == "VRAM":
+            self.__memory = RomInfo.getVRam()
         else:
             raise RuntimeError("Unknown section type: %s" % (section_type))
 

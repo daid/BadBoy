@@ -14,7 +14,7 @@ class CodeBlock(Block):
         super().__init__(memory, address)
         
         while True:
-            if address >= 0x8000 or memory[address]:
+            if address >= memory.base_address + 0x4000 or memory[address]:
                 break
 
             try:
@@ -41,15 +41,16 @@ class CodeBlock(Block):
                 other_memory = RomInfo.memoryAt(target, active_bank)
                 if other_memory:
                     other_block = other_memory[target]
-                    if other_block == None:
+                    if other_block is None:
                         CodeBlock(other_memory, target)
                         other_block = other_memory[target]
-                    elif isinstance(other_block, CodeBlock):
+                    elif isinstance(other_block, CodeBlock) and other_block.base_address == target:
                         if instr.type in (CALL, RST):
                             other_block.onCall(self.memory, address - instr.size, address)
                         else:
                             other_block.onJump(self.memory, address - instr.size, address)
-                    other_block.addAutoLabel(target, address, instr.type)
+                    if other_block is not None:
+                        other_block.addAutoLabel(target, address, instr.type)
             elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int) and instr.p0.target >= 0x8000:
                 mem = RomInfo.memoryAt(instr.p0.target, memory)
                 if mem:

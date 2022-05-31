@@ -29,8 +29,11 @@ if __name__ == "__main__":
                     spec.loader.exec_module(module)
         else:
             spec = importlib.util.spec_from_file_location("plugin", plugin)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            if spec:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+            else:
+                print("Failed to load plugin: %s" % (plugin))
 
     rom = ROM(args.rom)
     disassembler = Disassembler(rom)

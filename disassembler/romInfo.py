@@ -46,6 +46,10 @@ class RomInfo:
         return self.__hram
 
     @classmethod
+    def getVRam(self):
+        return self.__vram
+
+    @classmethod
     def getSRam(self):
         return self.__sram
 
