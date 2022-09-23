@@ -84,7 +84,7 @@ class AutoLabelLocalizer:
             if label is None:
                 continue
             if isinstance(label, str):
-                if not label.startswith("."):
+                if "." not in label:
                     self.__removeLocal(auto_label)
                     return
             elif isinstance(label, AutoLabel):
