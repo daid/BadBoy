@@ -99,12 +99,15 @@ class Memory:
     def getSectionStart(self, addr):
         return self.__section_starts.get(addr, None)
 
-    def mark(self, addr, mark):
+    def mark(self, addr, mark, value=True):
         if addr not in self.__marks:
-            self.__marks[addr] = set()
-        self.__marks[addr].add(mark)
+            self.__marks[addr] = {}
+        self.__marks[addr][mark] = value
 
     def hasMark(self, addr, mark):
         if addr not in self.__marks:
             return False
         return mark in self.__marks[addr]
+
+    def markValue(self, addr, mark):
+        return self.__marks[addr][mark]

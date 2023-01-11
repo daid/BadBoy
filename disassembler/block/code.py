@@ -59,7 +59,7 @@ class CodeBlock(Block):
                 mem = RomInfo.memoryAt(instr.p1.target, memory)
                 if mem:
                     mem.addAutoLabel(instr.p1.target, address, "data")
-            elif instr.p0 in (BC, DE, HL) and isinstance(instr.p1, int):
+            elif instr.p0 in (BC, DE, HL) and isinstance(instr.p1, int) and not memory.hasMark(address, "VALUE"):
                 if 0x4000 <= instr.p1 < 0x8000 and memory.bankNumber > 0: # Banked ROM
                     RomInfo.memoryAt(instr.p1, memory).addAutoLabel(instr.p1, address, "data")
                 elif 0xA000 <= instr.p1 < 0xC000: # SRAM
@@ -114,6 +114,12 @@ class CodeBlock(Block):
             file.asmLine(instr.size, instr.type)
 
     def formatAsAddressOrLabel(self, target, source_addr):
+        if self.memory.hasMark(source_addr, "VALUE"):
+            if target >= 0x8000 and self.memory.hasMark(source_addr, "SIGNED"):
+                return "%d" % (target - 0x10000)
+            return "%d" % (target)
+        if self.memory.hasMark(source_addr, "PTR_TARGET"):
+            return self.memory.markValue(source_addr, "PTR_TARGET")
         label = RomInfo.getLabelAt(target, RomInfo.romBank(self.memory.activeRomBankAt(source_addr)))
         if label:
             label = str(label)
@@ -126,7 +132,11 @@ class CodeBlock(Block):
         return "$%04x" % (target)
 
     def formatAsNumberOrLabel(self, target, source_addr):
-        if target < 0x1000 or target == 0xFF00:
+        if self.memory.hasMark(source_addr, "VALUE"):
+            if target >= 0x8000 and self.memory.hasMark(source_addr, "SIGNED"):
+                return "%d" % (target - 0x10000)
+            return "%d" % (target)
+        if target < 0x1000 or target == 0xFF00 and not self.memory.hasMark(source_addr, "PTR"):
             return "$%02x" % (target)
         return self.formatAsAddressOrLabel(target, source_addr)
 

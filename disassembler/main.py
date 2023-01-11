@@ -6,6 +6,7 @@ from rom import ROM
 from disassembler import Disassembler
 from instrumentation import processInstrumentation
 from annotation import simple
+from annotation import value
 from annotation import sdcc
 
 
