@@ -50,7 +50,7 @@ class CodeBlock(Block):
                         else:
                             other_block.onJump(self.memory, address - instr.size, address)
                     if other_block is not None:
-                        other_block.addAutoLabel(target, address, instr.type)
+                        other_block.addAutoLabel(target, address - instr.size, instr.type)
             elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int) and instr.p0.target >= 0x8000:
                 mem = RomInfo.memoryAt(instr.p0.target, memory)
                 if mem:
