@@ -140,7 +140,7 @@ class JumpTable(Block):
                 label = str(label)
             else:
                 label = "$%04x" % self.memory.word(file.addr)
-            file.asmLine(2, "dw", label, is_data=True)
+            file.asmLine(2, "dw", label, is_data=True, comment=("$%02x" % (n)))
 
 
 class StringBlock(Block):

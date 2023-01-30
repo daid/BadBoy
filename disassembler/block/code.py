@@ -126,7 +126,7 @@ class CodeBlock(Block):
             dot = label.find(".")
             if dot > 0:
                 prefix = label[:dot]
-                if str(self.memory.getLabelBefore(source_addr)) == prefix:
+                if str(self.memory.getLabelBefore(source_addr, local=False)) == prefix:
                     return label[dot:]
             return label
         return "$%04x" % (target)

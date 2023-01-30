@@ -50,10 +50,13 @@ class Memory:
     def getLabel(self, addr):
         return self.__labels.get(addr, None)
     
-    def getLabelBefore(self, addr):
+    def getLabelBefore(self, addr, *, local=True):
         while addr >= 0 and (addr not in self.__labels or self.__labels[addr] == False):
             addr -= 1
-        return self.__labels.get(addr, None)
+        res = self.__labels.get(addr, None)
+        if not local and "." in str(res):
+            return self.getLabelBefore(addr - 1, local=False)
+        return res
 
     def getAllLabels(self):
         return self.__labels.items()
