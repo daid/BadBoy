@@ -8,6 +8,7 @@ class Memory:
         self.__comments = {}
         self.__inline_comment = {}
         self.__marks = {}
+        self.__value_format = {}
         self.__include_start = {}
         self.__include_end = {}
         self.__section_starts = {}
@@ -114,3 +115,13 @@ class Memory:
 
     def markValue(self, addr, mark):
         return self.__marks[addr][mark]
+
+    def setValueFormatFunction(self, addr, func):
+        assert addr not in self.__value_format
+        self.__value_format[addr] = func
+
+    def hasValueFormatFunction(self, addr):
+        return addr in self.__value_format
+
+    def getValueFormatFunction(self, addr):
+        return self.__value_format[addr]
