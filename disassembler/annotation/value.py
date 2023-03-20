@@ -19,10 +19,12 @@ def value(memory, addr, *, signed=False):
         memory.setValueFormatFunction(addr, _formatNumber)
 
 @annotation(name="=ptr", priority=1000)
-def value(memory, addr, target=None):
+def value(memory, addr, target=None, *, bank=None):
     memory.mark(addr, "PTR")
     if target is not None:
         memory.mark(addr, "PTR_TARGET", target)
+    if bank is not None:
+        memory.mark(addr, "PTR_BANK", int(bank, 16))
 
 @annotation(name="=bank", priority=1000)
 def bank(memory, addr, target):

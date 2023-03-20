@@ -60,8 +60,12 @@ class CodeBlock(Block):
                 if mem:
                     mem.addAutoLabel(instr.p1.target, address, "data")
             elif instr.p0 in (BC, DE, HL) and isinstance(instr.p1, int) and not memory.hasValueFormatFunction(address - instr.size):
-                if 0x4000 <= instr.p1 < 0x8000 and memory.bankNumber > 0: # Banked ROM
-                    RomInfo.memoryAt(instr.p1, memory).addAutoLabel(instr.p1, address, "data")
+                if 0x4000 <= instr.p1 < 0x8000: # Banked ROM
+                    if memory.hasMark(address - instr.size, "PTR_BANK"):
+                        m = RomInfo.romBank(memory.markValue(address - instr.size, "PTR_BANK"))
+                        m.addAutoLabel(instr.p1, None, "data")
+                    elif memory.bankNumber > 0:
+                        RomInfo.memoryAt(instr.p1, memory).addAutoLabel(instr.p1, address, "data")
                 elif 0xA000 <= instr.p1 < 0xC000: # SRAM
                     RomInfo.memoryAt(instr.p1).addAutoLabel(instr.p1, address, "data")
                 elif 0xC000 <= instr.p1 < 0xE000: # WRAM
@@ -116,9 +120,12 @@ class CodeBlock(Block):
     def formatAsAddressOrLabel(self, target, source_addr):
         if self.memory.hasValueFormatFunction(source_addr):
             return self.memory.getValueFormatFunction(source_addr)(target)
+        rombank = self.memory.activeRomBankAt(source_addr)
         if self.memory.hasMark(source_addr, "PTR_TARGET"):
             return self.memory.markValue(source_addr, "PTR_TARGET")
-        label = RomInfo.getLabelAt(target, RomInfo.romBank(self.memory.activeRomBankAt(source_addr)))
+        if self.memory.hasMark(source_addr, "PTR_BANK"):
+            rombank = self.memory.markValue(source_addr, "PTR_BANK")
+        label = RomInfo.getLabelAt(target, RomInfo.romBank(rombank))
         if label:
             label = str(label)
             dot = label.find(".")
