@@ -1,7 +1,7 @@
 ROM = rom.gb
 
 SRCS = $(wildcard src/*.asm)
-GFXS = $(wildcard gfx/*.png)
+GFXS = $(shell find gfx/ -type f -name '*.png')
 
 all: $(ROM)
 
@@ -23,7 +23,7 @@ $(ROM): $(patsubst src/%.asm,.obj/%.o,$(SRCS))
 
 .gfx/%.bin: gfx/%.png
 	@mkdir -p $(dir .gfx/$*)
-	rgbgfx -o .gfx/$*.bin $<
+	rgbgfx -o .gfx/$*.bin $< -c '#ffffff,#c8c8c8,#646464,#000000'
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(patsubst src/%.asm,.dep/%.mk,$(SRCS))

@@ -35,6 +35,7 @@ class GfxImageBlock(Block):
         self.height = height
 
     def export(self, file):
+        brightnesslookup = [255, 200, 100, 0]
         addr = file.addr
         img = numpy.zeros((self.height * 8, self.width * 8), dtype=numpy.uint8)
         for y in range(self.height):
@@ -49,9 +50,8 @@ class GfxImageBlock(Block):
                             v |= 1
                         if b & (0x80 >> col):
                             v |= 2
-                        img[y*8+row, x*8+col] = v
-        img = PIL.Image.fromarray(img, "P")
-        img.putpalette([0xc4,0xf0,0xc2, 0x5a,0xb9,0xa8, 0x1e,0x60,0x6e, 0x2d,0x1b,0x00])
+                        img[y*8+row, x*8+col] = brightnesslookup[v]
+        img = PIL.Image.fromarray(img, "L")
         filename = os.path.join(file.basepath, "gfx", "%s.png" % (self.name))
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         img.save(filename)
