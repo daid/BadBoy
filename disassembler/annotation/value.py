@@ -10,11 +10,16 @@ def _formatNumberSigned(value):
         return f"{value-0x10000}"
     return f"{value}"
 
+def _formatNumberHex(value):
+    return f"${value:04x}"
+
 
 @annotation(name="=value", priority=1000)
-def value(memory, addr, *, signed=False):
+def value(memory, addr, *, signed=False, hex=False):
     if signed:
         memory.setValueFormatFunction(addr, _formatNumberSigned)
+    elif hex:
+        memory.setValueFormatFunction(addr, _formatNumberHex)
     else:
         memory.setValueFormatFunction(addr, _formatNumber)
 
