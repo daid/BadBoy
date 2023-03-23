@@ -14,7 +14,7 @@ def _formatNumberHex(value):
     return f"${value:04x}"
 
 
-@annotation(name="=value", priority=1000)
+@annotation(name="=value", priority=10)
 def value(memory, addr, *, signed=False, hex=False):
     if signed:
         memory.setValueFormatFunction(addr, _formatNumberSigned)
@@ -23,7 +23,7 @@ def value(memory, addr, *, signed=False, hex=False):
     else:
         memory.setValueFormatFunction(addr, _formatNumber)
 
-@annotation(name="=ptr", priority=1000)
+@annotation(name="=ptr", priority=10)
 def value(memory, addr, target=None, *, bank=None):
     memory.mark(addr, "PTR")
     if target is not None:
@@ -31,15 +31,15 @@ def value(memory, addr, target=None, *, bank=None):
     if bank is not None:
         memory.mark(addr, "PTR_BANK", int(bank, 16))
 
-@annotation(name="=bank", priority=1000)
+@annotation(name="=bank", priority=10)
 def bank(memory, addr, target):
     memory.setValueFormatFunction(addr, lambda n: f"BANK({target})")
 
-@annotation(name="=high", priority=1000)
+@annotation(name="=high", priority=10)
 def bank(memory, addr, target):
     memory.setValueFormatFunction(addr, lambda n: f"HIGH({target})")
 
-@annotation(name="=low", priority=1000)
+@annotation(name="=low", priority=10)
 def bank(memory, addr, target):
     memory.setValueFormatFunction(addr, lambda n: f"LOW({target})")
 

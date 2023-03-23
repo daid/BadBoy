@@ -19,7 +19,7 @@ def data(memory, addr, *, format, amount=1):
 def jumptable(memory, addr, *, amount=None, label=None):
     JumpTable(memory, addr, amount=int(amount) if amount is not None else None)
 
-@annotation
+@annotation(priority=10)
 def bank(memory, addr, bank_nr, size=1):
     for n in range(int(size)):
         memory.setActiveRomBankAt(addr + n, int(bank_nr))
