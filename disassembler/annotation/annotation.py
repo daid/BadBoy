@@ -7,6 +7,7 @@ def annotation(handler=None, *, priority=100, name=None):
     if handler == None:
         def f(handler):
             annotation(handler, priority=priority, name=name)
+            return handler
         return f
     if name is None:
         name = handler.__name__
