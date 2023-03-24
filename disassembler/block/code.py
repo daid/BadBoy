@@ -41,16 +41,19 @@ class CodeBlock(Block):
                 other_memory = RomInfo.memoryAt(target, active_bank)
                 if other_memory:
                     other_block = other_memory[target]
+                    stop = False
                     if other_block is None:
                         CodeBlock(other_memory, target)
                         other_block = other_memory[target]
                     elif isinstance(other_block, CodeBlock) and other_block.base_address == target:
                         if instr.type in (CALL, RST):
-                            other_block.onCall(self.memory, address - instr.size, address)
+                            stop = other_block.onCall(self.memory, address - instr.size, address)
                         else:
                             other_block.onJump(self.memory, address - instr.size, address)
                     if other_block is not None:
                         other_block.addAutoLabel(target, address - instr.size, instr.type)
+                    if stop:
+                        break
             elif isinstance(instr.p0, Ref) and isinstance(instr.p0.target, int) and instr.p0.target >= 0x8000:
                 mem = RomInfo.memoryAt(instr.p0.target, memory)
                 if mem:

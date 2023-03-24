@@ -48,6 +48,14 @@ class JumpTableFunction(CodeBlock):
     def onCall(self, from_memory, from_address, next_addr):
         JumpTable(from_memory, next_addr)
 
+@annotation(priority=90)
+def noreturn(memory, addr):
+    NoReturnFunction(memory, addr)
+
+class NoReturnFunction(CodeBlock):
+    def onCall(self, from_memory, from_address, next_addr):
+        return True
+
 class DataBlock(Block):
     def __init__(self, memory, addr, *, format, amount):
         super().__init__(memory, addr)

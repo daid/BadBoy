@@ -61,9 +61,9 @@ class Disassembler:
                 if not bank[addr]:
                     if bank.hasMark(addr, "CODE"):
                         CodeBlock(bank, addr)
-                    elif bank.hasMark(addr, "GFX_LOW") and bank.hasMark(addr + 1, "GFX_HIGH"):
+                    elif bank.hasMark(addr, "GFX_LOW") and bank.hasMark(addr + 1, "GFX_HIGH") and not bank[addr+1]:
                         size = 2
-                        while size < 16 and bank.hasMark(addr + size, "GFX_LOW") and bank.hasMark(addr + size + 1, "GFX_HIGH"):
+                        while size < 16 and bank.hasMark(addr + size, "GFX_LOW") and bank.hasMark(addr + size + 1, "GFX_HIGH") and not bank[addr + size] and not bank[addr + size + 1]:
                             size += 2
                         GfxBlock(bank, addr, bpp=2, size=size//2)
                     elif bank.hasMark(addr, "GFX_HIGH"):
