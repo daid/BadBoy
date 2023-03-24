@@ -16,8 +16,8 @@ def data(memory, addr, *, format, amount=1):
     DataBlock(memory, addr, format=format, amount=int(amount) if amount is not None else None);
 
 @annotation
-def jumptable(memory, addr, *, amount=None, label=None):
-    JumpTable(memory, addr, amount=int(amount) if amount is not None else None)
+def jumptable(memory, addr, *, amount=None, label=None, bank=None):
+    JumpTable(memory, addr, amount=int(amount) if amount is not None else None, bank=int(bank) if bank is not None else None)
 
 @annotation(priority=10)
 def bank(memory, addr, bank_nr, size=1):
@@ -126,8 +126,9 @@ class DataBlock(Block):
 
 
 class JumpTable(Block):
-    def __init__(self, memory, addr, *, amount=None):
+    def __init__(self, memory, addr, *, amount=None, bank=None):
         super().__init__(memory, addr)
+        self.__bank = bank
 
         for n in range(amount if amount is not None else 0x2000):
             if not self.resize(len(self) + 2, allow_fail=amount is None):
@@ -139,11 +140,16 @@ class JumpTable(Block):
             elif target >= 0x0100 and target < 0x4000:
                 CodeBlock(RomInfo.romBank(0), target)
                 RomInfo.romBank(0).addAutoLabel(target, addr, "call")
+            elif target >= 0x4000 and target < 0x8000 and bank is not None:
+                CodeBlock(RomInfo.romBank(bank), target)
+                RomInfo.romBank(bank).addAutoLabel(target, addr, "call")
 
     def export(self, file):
         for n in range(len(self) // 2):
             addr = self.memory.word(file.addr)
             label = self.memory.getLabel(addr) if addr >= 0x4000 else RomInfo.romBank(0).getLabel(addr)
+            if label is None and self.__bank:
+                label = RomInfo.romBank(self.__bank).getLabel(addr)
             if label:
                 label = str(label)
             else:
