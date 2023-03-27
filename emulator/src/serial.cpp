@@ -17,7 +17,7 @@ void Serial::SBReg::setImpl(uint8_t value)
 
 uint8_t Serial::SCReg::get() const
 {
-    uint8_t result = 0;
+    uint8_t result = 0x7C;
     if (serial.transfer_bits_left)
         result |= 0x81;
     if (serial.bit_transfer_cycles == 16)

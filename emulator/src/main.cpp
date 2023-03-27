@@ -60,7 +60,7 @@ void coreLoop(uint32_t max_cycles)
             static bool done[0xFFFF];
             if (!done[cpu.pc])
             {
-                //fprintf(stderr, "%08d %02x:%04x %2x %02x SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.cycles, card.rom_upper_bank, cpu.pc, mm::get(cpu.pc).get(), video.LY.get(), cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
+                //fprintf(stderr, "%08d %04x %2x %02x SP:%04x A:%02x BC:%04x DE:%04x HL:%04x F:%c%c%c%c\n", cpu.cycles, cpu.pc, mm::get(cpu.pc).get(), video.LY.get(), cpu.getSP(), cpu.A.get(), cpu.getBC(), cpu.getDE(), cpu.getHL(), cpu.F.Z ? 'Z' : ' ', cpu.F.N ? 'N' : ' ', cpu.F.H ? 'H' : ' ', cpu.F.C ? 'C' : ' ');
                 done[cpu.pc] = true;
             }
             {
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     uint32_t max_cycles = 0;
 
     int c;
-    while((c = getopt(argc, argv, "-o:r:pe:s:c:")) != -1)
+    while((c = getopt(argc, argv, "-o:r:pe:s:c:S:")) != -1)
     {
         switch(c)
         {
@@ -117,6 +117,7 @@ int main(int argc, char** argv)
         case 'p': replay_playback = true; break;
         case 's': screenshot = optarg; break;
         case 'c': max_cycles = atoi(optarg); break;
+        case 'S': video.setScale(atoi(optarg)); break;
         case 'e': ezflash = optarg; break;
         case '?': usage(argv[0]); return 1;
         }

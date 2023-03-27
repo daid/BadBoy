@@ -22,7 +22,7 @@ void Video::init()
     oam.resize(0x00A0);
 
     SDL_Init(SDL_INIT_EVERYTHING);
-    window = SDL_CreateWindow("BadBoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * 4, 144 * 4, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("BadBoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * scale, 144 * scale, SDL_WINDOW_SHOWN);
     if (window)
         window_surface = SDL_GetWindowSurface(window);
     backbuffer = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
@@ -341,4 +341,14 @@ void Video::dumpInstrumentation(FILE* f)
 {
     vram.dumpInstrumentation(f);
     oam.dumpInstrumentation(f);
+}
+
+void Video::setScale(int _scale)
+{
+    scale = _scale;
+    if (window)
+        SDL_DestroyWindow(window);
+    window = SDL_CreateWindow("BadBoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * scale, 144 * scale, SDL_WINDOW_SHOWN);
+    if (window)
+        window_surface = SDL_GetWindowSurface(window);
 }

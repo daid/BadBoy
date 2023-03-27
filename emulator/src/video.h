@@ -57,11 +57,13 @@ public:
 
     uint32_t line_start_cycle;
     int frame_skip_counter = 0;
+    int scale = 4;
 
     void init();
     bool update();
     void dumpInstrumentation(FILE* f);
     void screenshot(const char* filename);
+    void setScale(int scale);
 
     Mem8& getVRam(uint16_t address);
 };
