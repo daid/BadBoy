@@ -23,7 +23,6 @@ class RomInfo:
         self.macros = {
             "ld_long_load": "db $FA\ndw \\2",
             "ld_long_store": "db $EA\ndw \\1",
-            "short_halt": "db $76",
             "short_stop": "db $10",
         }
         self.charmap = {}

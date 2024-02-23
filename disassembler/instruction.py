@@ -4,7 +4,6 @@ NOP = "nop"
 STOP = "stop"
 SHORT_STOP = "short_stop"
 HALT = "halt"
-SHORT_HALT = "short_halt"
 JP = "jp"
 JR = "jr"
 LD = "ld"
@@ -208,13 +207,7 @@ class Instruction:
         if op == 0x46: self.__set(LD, B, Ref(HL))
         if op == 0x56: self.__set(LD, D, Ref(HL))
         if op == 0x66: self.__set(LD, H, Ref(HL))
-        if op == 0x76:
-            if self.__getUInt8() == 0x00: # Proper HALT needs a NOP after HALT
-                self.__set(HALT)
-            else:
-                self.size = 1
-                self.__set(SHORT_HALT)
-
+        if op == 0x76: self.__set(HALT)
         if op == 0x47: self.__set(LD, B, A)
         if op == 0x57: self.__set(LD, D, A)
         if op == 0x67: self.__set(LD, H, A)

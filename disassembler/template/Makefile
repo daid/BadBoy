@@ -9,7 +9,7 @@ check: $(ROM)
 	md5sum -c $(ROM).md5
 
 clean:
-	-rm -rf .bin .obj .dep .gfx
+	-rm -rf .bin .obj .dep .gfx $(ROM)
 
 $(ROM): $(patsubst src/%.asm,.obj/%.o,$(SRCS))
 	@mkdir -p $(@D)
