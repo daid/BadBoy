@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
+#include <array>
 
 static int dec2bcd(int n)
 {

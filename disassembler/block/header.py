@@ -84,7 +84,7 @@ class ROMHeader(Block):
 class NoExport00(Block):
     def __init__(self, memory, end_addr):
         addr = end_addr - 1
-        while memory.byte(addr) == 0x00 and memory.getLabel(addr) == None and memory[addr] == None:
+        while memory.byte(addr) == 0x00 and memory.getLabel(addr) == None and memory[addr] == None and addr > memory.base_address:
             addr -= 1
         addr += 1
         super().__init__(memory, addr, size=end_addr-addr)
