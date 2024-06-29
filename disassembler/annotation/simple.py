@@ -69,24 +69,30 @@ class DataBlock(Block):
             self.__code = "dw"
         else:
             macro = []
-            for idx, f in enumerate(format.lower()):
+            for idx, f in enumerate(format):
                 if f == "b":
                     macro.append("db \\1")
                 elif f in ("w", "p"):
                     macro.append("dw \\1")
+                elif f in ("W", "P"):
+                    macro.append("db high(\\1), low(\\1)")
+                else:
+                    raise RuntimeError("Unknown data format specifier")
                 macro.append("shift")
             RomInfo.macros[self.__code] = "\n".join(macro)
 
 
         for n in range(amount):
             size = 0
-            for f in format.lower():
+            for f in format:
                 if f == "b":
                     size += 1
-                elif f == "w":
+                elif f in ("w", "W"):
                     size += 2
-                elif f == "p":
+                elif f in ("p", "P"):
                     target = self.memory.word(addr + len(self) + size)
+                    if f == "P":
+                        target = (target >> 8) | ((target << 8) & 0xFF00)
                     if target >= memory.base_address and target < memory.base_address + len(memory):
                         memory.addAutoLabel(target, addr, "data")
                     size += 2
@@ -100,15 +106,22 @@ class DataBlock(Block):
         for n in range(self.__amount):
             size = 0
             params = []
-            for f in self.__format.lower():
+            for f in self.__format:
                 if f == "b":
                     params.append("$%02x" % self.memory.byte(file.addr + size))
                     size += 1
                 elif f == "w":
                     params.append("$%04x" % self.memory.word(file.addr + size))
                     size += 2
-                elif f == "p":
+                elif f == "W":
+                    word = self.memory.word(file.addr + size)
+                    word = (word >> 8) | ((word << 8) & 0xFF00)
+                    params.append("$%04x" % word)
+                    size += 2
+                elif f in ("p", "P"):
                     addr = self.memory.word(file.addr + size)
+                    if f == "P":
+                        addr = (addr >> 8) | ((addr << 8) & 0xFF00)
                     label = self.memory.getLabel(addr)
                     if label:
                         label = str(label)
