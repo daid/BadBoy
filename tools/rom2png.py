@@ -28,9 +28,12 @@ palette = [
     0xC8,0x70,0x20, 0x20,0xB0,0x48, 0x08,0x48,0x28, 0x00,0x00,0x00,
     0xF8,0xF8,0x88, 0x60,0xB8,0x20, 0x30,0x68,0x28, 0x00,0x00,0x00,
     0xA0,0xF8,0xF8, 0x60,0xB8,0x20, 0x68,0x00,0xE8, 0x00,0x00,0x00,
-
+]
+palette += [n // 2 for n in palette]
+palette += [
     0x00,0x00,0x00, 0xFF,0xFF,0xFF
 ]
+
 
 def oneBitPerPixel(data, data_type, width, height=None):
     if height is None:
@@ -70,7 +73,7 @@ def twoBitsPerPixel(data, data_type, width, height=None):
                         v |= 2
                     img[y*8+row, x*8+col] = v + data_type[addr-2] * 4
     img = PIL.Image.fromarray(img, "P")
-    img.putpalette([0xc4,0xf0,0xc2, 0x5a,0xb9,0xa8, 0x1e,0x60,0x6e, 0x2d,0x1b,0x00])
+    img.putpalette(palette)
     return img
 
 
@@ -80,6 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, required=True)
     parser.add_argument("--1bpp", dest='one', action="store_true")
     parser.add_argument("--instrumentation", action='append', default=[])
+    parser.add_argument("--diff", type=str, required=False)
     args = parser.parse_args()
 
     data = open(args.rom, "rb").read()
@@ -98,24 +102,32 @@ if __name__ == "__main__":
                 if used_as & MARK_DATA:
                     data_type[source & 0xFFFFFFFF] = 2
 
+    if args.diff:
+        diff = open(args.diff, "rb").read()
+        for n in range(min(len(data), len(diff))):
+            if data[n] == diff[n]:
+                data_type[n] |= 4
+
     pixels_per_bank = 512 * (2 if args.one else 1)
-    rows = bank_count // 0x20
+    rows = 1
+    while ((bank_count + rows - 1) // rows) > rows * 4:
+        rows += 1
     cols = (bank_count + rows - 1) // rows
     img = PIL.Image.new("P", (cols * 136 + 64, rows * (pixels_per_bank + 32)))
     draw = PIL.ImageDraw.Draw(img)
     img.putpalette(palette)
-    draw.rectangle(((0,0), img.size), 16)
+    draw.rectangle(((0,0), img.size), 32)
     for addr in range(0, 0x4001, 0x0400):
         for row in range(rows):
             y = addr * pixels_per_bank // 0x4000 + 16 + row * (pixels_per_bank + 32)
-            draw.text((3, y - 10), "%04X" % (addr + 0x4000), 17)
-            draw.text((cols * 136 + 32, y - 10), "%04X" % (addr + 0x4000), 17)
+            draw.text((3, y - 10), "%04X" % (addr + 0x4000), 33)
+            draw.text((cols * 136 + 32, y - 10), "%04X" % (addr + 0x4000), 33)
             draw.line((0, y, img.size[0], y), 17)
     for bank_nr in range(bank_count):
         x = 32 + (bank_nr % cols) * 136
         y = 16 + (bank_nr // cols) * (pixels_per_bank + 32)
-        draw.text((32 + 16 + x, y - 16), "Bank%02X" % (bank_nr), 17)
-        draw.text((32 + 16 + x, y + pixels_per_bank), "Bank%02X" % (bank_nr), 17)
+        draw.text((32 + 16 + x, y - 16), "Bank%02X" % (bank_nr), 33)
+        draw.text((32 + 16 + x, y + pixels_per_bank), "Bank%02X" % (bank_nr), 33)
         bank_data = data[bank_nr*0x4000:bank_nr*0x4000+0x4000]
         bank_type_data = data_type[bank_nr*0x4000:bank_nr*0x4000+0x4000]
         if args.one:
