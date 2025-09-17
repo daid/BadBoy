@@ -54,14 +54,14 @@ def oneBitPerPixel(data, data_type, width, height=None):
     img.putpalette(palette)
     return img
 
-def twoBitsPerPixel(data, data_type, width, height=None):
+def twoBitsPerPixel(data, data_type, width, height=None, *, tile_height=8):
     if height is None:
-        height = len(data) // 16 // width
+        height = len(data) // (tile_height * 2) // width
     addr = 0
-    img = numpy.zeros((height * 8, width * 8), dtype=numpy.uint8)
+    img = numpy.zeros((height * tile_height, width * 8), dtype=numpy.uint8)
     for y in range(height):
         for x in range(width):
-            for row in range(8):
+            for row in range(tile_height):
                 a = data[addr]
                 b = data[addr + 1]
                 addr += 2
@@ -71,7 +71,7 @@ def twoBitsPerPixel(data, data_type, width, height=None):
                         v |= 1
                     if b & (0x80 >> col):
                         v |= 2
-                    img[y*8+row, x*8+col] = v + data_type[addr-2] * 4
+                    img[y*tile_height+row, x*8+col] = v + data_type[addr-2] * 4
     img = PIL.Image.fromarray(img, "P")
     img.putpalette(palette)
     return img
@@ -82,8 +82,10 @@ if __name__ == "__main__":
     parser.add_argument("rom", type=str)
     parser.add_argument("--output", type=str, required=True)
     parser.add_argument("--1bpp", dest='one', action="store_true")
+    parser.add_argument("--sprite16", dest='sprite16', action="store_true")
     parser.add_argument("--instrumentation", action='append', default=[])
     parser.add_argument("--diff", type=str, required=False)
+    parser.add_argument("--pal", type=str, required=False)
     args = parser.parse_args()
 
     data = open(args.rom, "rb").read()
@@ -107,6 +109,13 @@ if __name__ == "__main__":
         for n in range(min(len(data), len(diff))):
             if data[n] == diff[n]:
                 data_type[n] |= 4
+    tile_height = 16 if args.sprite16 else 8
+    if args.pal:
+        assert len(args.pal) == 4, "--pal requires 4 numbers are parameter"
+        tmp = palette[:]
+        for idx, target in enumerate(args.pal):
+            target = int(target)
+            palette[idx*3:idx*3+3] = tmp[target*3:target*3+3]
 
     pixels_per_bank = 512 * (2 if args.one else 1)
     rows = 1
@@ -133,5 +142,5 @@ if __name__ == "__main__":
         if args.one:
             img.paste(oneBitPerPixel(bank_data, bank_type_data, 16), (x, y))
         else:
-            img.paste(twoBitsPerPixel(bank_data, bank_type_data, 16), (x, y))
+            img.paste(twoBitsPerPixel(bank_data, bank_type_data, 16, tile_height=tile_height), (x, y))
     img.save(args.output)
