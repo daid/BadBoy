@@ -84,6 +84,7 @@ if __name__ == "__main__":
     parser.add_argument("--1bpp", dest='one', action="store_true")
     parser.add_argument("--sprite16", dest='sprite16', action="store_true")
     parser.add_argument("--instrumentation", action='append', default=[])
+    parser.add_argument("--no-instrumentation", action='append', default=[])
     parser.add_argument("--diff", type=str, required=False)
     parser.add_argument("--pal", type=str, required=False)
     args = parser.parse_args()
@@ -99,10 +100,22 @@ if __name__ == "__main__":
                 break
             source, used_as = struct.unpack("<QQ", record)
             if (source & ID_MASK) == ID_ROM:
-                if used_as & MARK_INSTR:
-                    data_type[source & 0xFFFFFFFF] = 1
                 if used_as & MARK_DATA:
                     data_type[source & 0xFFFFFFFF] = 2
+                if used_as & MARK_INSTR:
+                    data_type[source & 0xFFFFFFFF] = 1
+    for filename in args.no_instrumentation:
+        f = open(filename, "rb")
+        while True:
+            record = f.read(16)
+            if not record:
+                break
+            source, used_as = struct.unpack("<QQ", record)
+            if (source & ID_MASK) == ID_ROM:
+                if used_as & MARK_DATA:
+                    data_type[source & 0xFFFFFFFF] = 0
+                if used_as & MARK_INSTR:
+                    data_type[source & 0xFFFFFFFF] = 0
 
     if args.diff:
         diff = open(args.diff, "rb").read()
