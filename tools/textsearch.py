@@ -20,7 +20,7 @@ def main():
     for n in range(-128, 128):
         results = []
         for search in args.search:
-            s = bytes([(ord(c) + n + 255) & 0xFF for c in search])
+            s = bytes([(ord(c) + n + 256) & 0xFF for c in search])
             results.append(find_all(rom, s))
         if all(results):
             print(f"Found the strings at character shift {n}")
