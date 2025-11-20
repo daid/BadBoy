@@ -251,9 +251,11 @@ public:
             current_address = target_addr_start;
 
             makedir("output");
-            char filename[32];
+            char filename[128];
             sprintf(filename, "output/%s-%02x.%04x-%04x", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end);
             makedir(filename);
+            sprintf(filename, "output/%s-%02x.%04x-%04x/_%s-%02x.html", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value);
+            html_file = fopen(filename, "wt");
         }
     }
 
@@ -309,9 +311,10 @@ public:
             memcpy(reference_image, emulator_get_frame_buffer(emu), sizeof(FrameBuffer));
         } else {
             if (memcmp(reference_image, emulator_get_frame_buffer(emu), sizeof(FrameBuffer)) != 0) {
-                char filename[32];
-                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x.bmp", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address);
+                char filename[128];
+                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x.bmp", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], sweep_value);
                 SDL_SaveBMP(backbuffer, filename);
+                fprintf(html_file, "<img src='%04x-%s-%02x.bmp' title='%04x-%s-%02x'> ", current_address, modeToString[int(sweep_mode)], sweep_value, current_address, modeToString[int(sweep_mode)], sweep_value);
             }
             current_address += 1;
             if (current_address == target_addr_end)
@@ -492,6 +495,7 @@ private:
         Sweeping
     } run_state = RunState::Inactive;
     int current_address = 0;
+    FILE* html_file = nullptr;
 
     static constexpr const char* typeToString[3] = {"ROM", "WRAM", "HRAM"};
     static constexpr const char* modeToString[4] = {"SET", "ADD", "SUB", "XOR"};
