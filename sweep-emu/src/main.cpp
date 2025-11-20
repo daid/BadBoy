@@ -309,6 +309,11 @@ public:
             run_state = RunState::Sweeping;
             current_address = target_addr_start;
             memcpy(reference_image, emulator_get_frame_buffer(emu), sizeof(FrameBuffer));
+
+            char filename[128];
+            sprintf(filename, "output/%s-%02x.%04x-%04x/ref-%s-%02x.bmp", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value);
+            SDL_SaveBMP(backbuffer, filename);
+            fprintf(html_file, "<img src='ref-%s-%02x.bmp' title='ref-%s-%02x'> ", modeToString[int(sweep_mode)], sweep_value, modeToString[int(sweep_mode)], sweep_value);
         } else {
             if (memcmp(reference_image, emulator_get_frame_buffer(emu), sizeof(FrameBuffer)) != 0) {
                 char filename[128];
