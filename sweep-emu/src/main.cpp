@@ -322,6 +322,7 @@ public:
 
     void draw(SDL_Surface* window_surface, int scale)
     {
+        if (!isActive()) return;
         SDL_Rect window_rect{0, 0, 160*scale,144*scale};
         SDL_BlitScaled(backbuffer, nullptr, window_surface, &window_rect);
     }
@@ -371,10 +372,6 @@ public:
     }
 
 private:
-    MainEmulator& main_emulator;
-    FileData base_rom_file;
-    FrameBuffer reference_image;
-
     bool isValid()
     {
         if (target_addr_end <= target_addr_start) return false;
@@ -458,6 +455,9 @@ private:
         }
     }
 
+    MainEmulator& main_emulator;
+    FileData base_rom_file;
+    FrameBuffer reference_image;
     SDL_Surface* backbuffer;
 
     enum class TargetType {
