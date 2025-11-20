@@ -1,4 +1,5 @@
 #include "emulator.h"
+#include "platform.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -207,6 +208,11 @@ public:
         return joypad_recording;
     }
 
+    bool romLoaded()
+    {
+        return emu != nullptr;
+    }
+
 private:
     JoypadButtons joypad_buttons = {FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE};
     Emulator* emu = nullptr;
@@ -234,20 +240,20 @@ public:
     {
         if (run_state != RunState::Inactive) return;
         if (!down) return;
-        if (key == SDLK_RIGHT) cursor_pos = cursor_pos == CursorPos::End3 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1);
-        if (key == SDLK_LEFT) cursor_pos = cursor_pos == CursorPos::Type ? CursorPos::End3 : (CursorPos)((int)cursor_pos - 1);
-        if (key >= SDLK_0 && key <= SDLK_9) { setCurrent(key - SDLK_0); cursor_pos = cursor_pos == CursorPos::End3 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
-        if (key >= SDLK_a && key <= SDLK_f) { setCurrent(key - SDLK_a + 10); cursor_pos = cursor_pos == CursorPos::End3 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
+        if (key == SDLK_RIGHT) cursor_pos = cursor_pos == CursorPos::Value1 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1);
+        if (key == SDLK_LEFT) cursor_pos = cursor_pos == CursorPos::Type ? CursorPos::Value1 : (CursorPos)((int)cursor_pos - 1);
+        if (key >= SDLK_0 && key <= SDLK_9) { setCurrent(key - SDLK_0); cursor_pos = cursor_pos == CursorPos::Value1 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
+        if (key >= SDLK_a && key <= SDLK_f) { setCurrent(key - SDLK_a + 10); cursor_pos = cursor_pos == CursorPos::Value1 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
         if (key == SDLK_UP) setCurrent(getCurrent() + 1);
         if (key == SDLK_DOWN) setCurrent(getCurrent() - 1);
         if (key == SDLK_RETURN && isValid()) {
             run_state = RunState::ReferenceImage;
             current_address = target_addr_start;
 
-            mkdir("output", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            makedir("output");
             char filename[32];
             sprintf(filename, "output/%s-%02x.%04x-%04x", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end);
-            mkdir(filename, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            makedir(filename);
         }
     }
 
@@ -265,7 +271,8 @@ public:
         init.rom.data = (uint8_t*)malloc(base_rom_file.size);
         memcpy(init.rom.data, base_rom_file.data, base_rom_file.size);
         if (run_state == RunState::Sweeping && target_type == TargetType::ROM) {
-            init.rom.data[target_bank * 0x4000 + (current_address & 0x3FFF)] += 1;
+            auto ptr = &init.rom.data[target_bank * 0x4000 + (current_address & 0x3FFF)];
+            *ptr = applySweep(*ptr);
         }
         init.rom.size = base_rom_file.size;
         init.audio_frequency = 44100;
@@ -279,7 +286,7 @@ public:
         emulator_read_state(emu, &fd);
         if (run_state == RunState::Sweeping && target_type != TargetType::ROM) {
             //TODO: Handle WRAM banking.
-            emulator_write_mem(emu, current_address, emulator_read_mem(emu, current_address) + 1);
+            emulator_write_mem(emu, current_address, applySweep(emulator_read_mem(emu, current_address)));
         }
         while(!joypad_data.empty()) {
             auto res = emulator_run_until(emu, emulator_get_ticks(emu) + PPU_FRAME_TICKS * 2);
@@ -328,7 +335,7 @@ public:
             infobar.setStatus(line0, "");
             return;
         }
-        sprintf(line0, "Target: %-4s %02x:%04x-%04x", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end);
+        sprintf(line0, "Target: %-4s %02x:%04x-%04x %-3s %02x", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value);
         if (!isValid())
             sprintf(line1, "Target INVALID");
         else if (!main_emulator.hasSaveState())
@@ -350,6 +357,9 @@ public:
         case CursorPos::End1: cursor_x = 22; break;
         case CursorPos::End2: cursor_x = 23; break;
         case CursorPos::End3: cursor_x = 24; break;
+        case CursorPos::Mode: cursor_x = 26; cursor_width = 3; break;
+        case CursorPos::Value0: cursor_x = 30; break;
+        case CursorPos::Value1: cursor_x = 31; break;
         }
 
         infobar.setStatus(line0, line1, cursor_x, cursor_y, cursor_width);
@@ -396,6 +406,17 @@ private:
         return true;
     }
 
+    uint8_t applySweep(uint8_t value)
+    {
+        switch(sweep_mode) {
+        case SweepMode::Set: return sweep_value;
+        case SweepMode::Add: return value + sweep_value;
+        case SweepMode::Sub: return value - sweep_value;
+        case SweepMode::Xor: return value ^ sweep_value;
+        }
+        return value;
+    }
+
     int getCurrent()
     {
         switch(cursor_pos) {
@@ -410,6 +431,9 @@ private:
         case CursorPos::End1: return (target_addr_end >> 8) & 0x0F;
         case CursorPos::End2: return (target_addr_end >> 4) & 0x0F;
         case CursorPos::End3: return (target_addr_end >> 0) & 0x0F;
+        case CursorPos::Mode: return int(sweep_mode);
+        case CursorPos::Value0: return (sweep_value >> 4) & 0x0F;
+        case CursorPos::Value1: return (sweep_value >> 0) & 0x0F;
         }
         return 0;
     }
@@ -428,6 +452,9 @@ private:
         case CursorPos::End1: target_addr_end = (target_addr_end & 0xF0FF) | ((value & 0x0F) << 8); break;
         case CursorPos::End2: target_addr_end = (target_addr_end & 0xFF0F) | ((value & 0x0F) << 4); break;
         case CursorPos::End3: target_addr_end = (target_addr_end & 0xFFF0) | ((value & 0x0F) << 0); break;
+        case CursorPos::Mode: while(value < int(SweepMode::Set)) value += 4; while(value > int(SweepMode::Xor)) value -= 4; sweep_mode = SweepMode(value); break;
+        case CursorPos::Value0: sweep_value = (sweep_value & 0x0F) | ((value & 0x0F) << 4); break;
+        case CursorPos::Value1: sweep_value = (sweep_value & 0xF0) | ((value & 0x0F) << 0); break;
         }
     }
 
@@ -446,7 +473,17 @@ private:
         Bank0, Bank1,
         Start0, Start1, Start2, Start3,
         End0, End1, End2, End3,
+        Mode,
+        Value0, Value1
     } cursor_pos = CursorPos::Type;
+    enum class SweepMode
+    {
+        Set,
+        Add,
+        Sub,
+        Xor
+    } sweep_mode = SweepMode::Add;
+    uint8_t sweep_value = 1;
 
 
     enum class RunState{
@@ -457,12 +494,19 @@ private:
     int current_address = 0;
 
     static constexpr const char* typeToString[3] = {"ROM", "WRAM", "HRAM"};
+    static constexpr const char* modeToString[4] = {"SET", "ADD", "SUB", "XOR"};
 };
+
+void printusage(const char* app)
+{
+    printf("Usage:\n");
+    printf("%s rom.gb[c] [-S display_scale]\n", app);
+}
 
 int main(int argc, char** argv)
 {
     std::string rom_filename;
-    int scale = 1;
+    int scale = 3;
     int c;
     while((c = getopt(argc, argv, "-S:")) != -1)
     {
@@ -470,7 +514,14 @@ int main(int argc, char** argv)
         {
         case 1: rom_filename = optarg; break;
         case 'S': scale = std::max(1, atoi(optarg)); break;
+        case '?':
+            printusage(argv[0]);
+            exit(0);
         }
+    }
+
+    if (rom_filename.empty()) {
+        rom_filename = filedialog();
     }
 
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -478,6 +529,8 @@ int main(int argc, char** argv)
     auto window_surface = SDL_GetWindowSurface(window);
 
     MainEmulator main_emulator(rom_filename.c_str());
+    if (!main_emulator.romLoaded())
+        exit(1);
     InfoBar info_bar;
     Sweeper sweeper{main_emulator, rom_filename.c_str()};
     enum class Mode
@@ -486,12 +539,14 @@ int main(int argc, char** argv)
     } mode = Mode::Game;
 
     bool running = true;
+    bool fast_forward = false;
     while(running) {
         SDL_Event e;
         while(SDL_PollEvent(&e)) {
             switch(e.type) {
                 case SDL_KEYDOWN:
                     if (e.key.keysym.sym == SDLK_ESCAPE) running = false;
+                    if (e.key.keysym.sym == SDLK_KP_PLUS) fast_forward = true;
                     if (e.key.keysym.sym == SDLK_TAB) mode = mode == Mode::Game ? Mode::Sweeper : Mode::Game;
                     if (mode == Mode::Game)
                         main_emulator.handleKey(e.key.keysym.sym, true);
@@ -499,6 +554,7 @@ int main(int argc, char** argv)
                         sweeper.handleKey(e.key.keysym.sym, true);
                     break;
                 case SDL_KEYUP:
+                    if (e.key.keysym.sym == SDLK_KP_PLUS) fast_forward = false;
                     if (mode == Mode::Game)
                         main_emulator.handleKey(e.key.keysym.sym, false);
                     else
@@ -524,7 +580,7 @@ int main(int argc, char** argv)
         info_bar.draw(window_surface, scale);
 
         SDL_UpdateWindowSurface(window);
-        if (mode != Mode::Sweeper || !sweeper.isActive())
+        if (!sweeper.isActive() && !fast_forward)
             SDL_Delay(1000/60);
     }
     return 0;
