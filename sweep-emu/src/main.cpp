@@ -317,8 +317,11 @@ public:
                 fprintf(html_file, "<img src='%04x-%s-%02x.bmp' title='%04x-%s-%02x'> ", current_address, modeToString[int(sweep_mode)], sweep_value, current_address, modeToString[int(sweep_mode)], sweep_value);
             }
             current_address += 1;
-            if (current_address == target_addr_end)
+            if (current_address == target_addr_end) {
                 run_state = RunState::Inactive;
+                fclose(html_file);
+                html_file = nullptr;
+            }
         }
         emulator_delete(emu);
     }
