@@ -1,5 +1,7 @@
 #include "emulator.h"
 #include "platform.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -301,25 +303,37 @@ public:
                 break;
         }
 
+        FrameBuffer* current_image = emulator_get_frame_buffer(emu);
         SDL_LockSurface(backbuffer);
-        memcpy(backbuffer->pixels, emulator_get_frame_buffer(emu), sizeof(FrameBuffer));
+        memcpy(backbuffer->pixels, current_image, sizeof(FrameBuffer));
         SDL_UnlockSurface(backbuffer);
 
         if (run_state == RunState::ReferenceImage) {
             run_state = RunState::Sweeping;
             current_address = target_addr_start;
-            memcpy(reference_image, emulator_get_frame_buffer(emu), sizeof(FrameBuffer));
+            memcpy(reference_image, current_image, sizeof(FrameBuffer));
 
             char filename[128];
-            sprintf(filename, "output/%s-%02x.%04x-%04x/ref-%s-%02x.bmp", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value);
-            SDL_SaveBMP(backbuffer, filename);
-            fprintf(html_file, "<img src='ref-%s-%02x.bmp' title='ref-%s-%02x'> ", modeToString[int(sweep_mode)], sweep_value, modeToString[int(sweep_mode)], sweep_value);
+            sprintf(filename, "output/%s-%02x.%04x-%04x/ref-%s-%02x.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value);
+            stbi_write_png(filename, 160, 144, 4, current_image, 160 * sizeof(uint32_t));
+            fprintf(html_file, "<img src='ref-%s-%02x.png' title='ref-%s-%02x'> ", modeToString[int(sweep_mode)], sweep_value, modeToString[int(sweep_mode)], sweep_value);
         } else {
-            if (memcmp(reference_image, emulator_get_frame_buffer(emu), sizeof(FrameBuffer)) != 0) {
+            if (memcmp(reference_image, current_image, sizeof(FrameBuffer)) != 0) {
                 char filename[128];
-                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x.bmp", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], sweep_value);
-                SDL_SaveBMP(backbuffer, filename);
-                fprintf(html_file, "<img src='%04x-%s-%02x.bmp' title='%04x-%s-%02x'> ", current_address, modeToString[int(sweep_mode)], sweep_value, current_address, modeToString[int(sweep_mode)], sweep_value);
+                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], sweep_value);
+                stbi_write_png(filename, 160, 144, 4, current_image, 160 * sizeof(uint32_t));
+                fprintf(html_file, "<img src='%04x-%s-%02x.png' title='%04x-%s-%02x'> ", current_address, modeToString[int(sweep_mode)], sweep_value, current_address, modeToString[int(sweep_mode)], sweep_value);
+
+                for(int idx=0; idx<160*144; idx++) {
+                    uint32_t new_pixel = 0xFF000000;
+                    new_pixel |= abs(int(((*current_image)[idx] >> 0) & 0xFF) - int((reference_image[idx] >> 0) & 0xFF)) << 0;
+                    new_pixel |= abs(int(((*current_image)[idx] >> 8) & 0xFF) - int((reference_image[idx] >> 8) & 0xFF)) << 8;
+                    new_pixel |= abs(int(((*current_image)[idx] >> 16) & 0xFF) - int((reference_image[idx] >> 16) & 0xFF)) << 16;
+                    (*current_image)[idx] = new_pixel;
+                }
+                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x-delta.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], sweep_value);
+                stbi_write_png(filename, 160, 144, 4, current_image, 160 * sizeof(uint32_t));
+                fprintf(html_file, "<img src='%04x-%s-%02x-delta.png' title='%04x-%s-%02x-delta'> ", current_address, modeToString[int(sweep_mode)], sweep_value, current_address, modeToString[int(sweep_mode)], sweep_value);
             }
             current_address += 1;
             if (current_address == target_addr_end) {
