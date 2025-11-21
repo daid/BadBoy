@@ -242,15 +242,16 @@ public:
     {
         if (run_state != RunState::Inactive) return;
         if (!down) return;
-        if (key == SDLK_RIGHT) cursor_pos = cursor_pos == CursorPos::Value1 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1);
-        if (key == SDLK_LEFT) cursor_pos = cursor_pos == CursorPos::Type ? CursorPos::Value1 : (CursorPos)((int)cursor_pos - 1);
-        if (key >= SDLK_0 && key <= SDLK_9) { setCurrent(key - SDLK_0); cursor_pos = cursor_pos == CursorPos::Value1 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
-        if (key >= SDLK_a && key <= SDLK_f) { setCurrent(key - SDLK_a + 10); cursor_pos = cursor_pos == CursorPos::Value1 ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
+        if (key == SDLK_RIGHT) cursor_pos = cursor_pos == CursorPos::ValueMode ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1);
+        if (key == SDLK_LEFT) cursor_pos = cursor_pos == CursorPos::Type ? CursorPos::ValueMode : (CursorPos)((int)cursor_pos - 1);
+        if (key >= SDLK_0 && key <= SDLK_9) { setCurrent(key - SDLK_0); cursor_pos = cursor_pos == CursorPos::ValueMode ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
+        if (key >= SDLK_a && key <= SDLK_f) { setCurrent(key - SDLK_a + 10); cursor_pos = cursor_pos == CursorPos::ValueMode ? CursorPos::Type : (CursorPos)((int)cursor_pos + 1); }
         if (key == SDLK_UP) setCurrent(getCurrent() + 1);
         if (key == SDLK_DOWN) setCurrent(getCurrent() - 1);
         if (key == SDLK_RETURN && isValid()) {
             run_state = RunState::ReferenceImage;
             current_address = target_addr_start;
+            current_value = sweep_value;
 
             makedir("output");
             char filename[128];
@@ -311,18 +312,20 @@ public:
         if (run_state == RunState::ReferenceImage) {
             run_state = RunState::Sweeping;
             current_address = target_addr_start;
+            current_value = sweep_value;
             memcpy(reference_image, current_image, sizeof(FrameBuffer));
 
             char filename[128];
-            sprintf(filename, "output/%s-%02x.%04x-%04x/ref-%s-%02x.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value);
+            sprintf(filename, "output/%s-%02x.%04x-%04x/ref-%s-%02x.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], current_value);
             stbi_write_png(filename, 160, 144, 4, current_image, 160 * sizeof(uint32_t));
-            fprintf(html_file, "<img src='ref-%s-%02x.png' title='ref-%s-%02x'> ", modeToString[int(sweep_mode)], sweep_value, modeToString[int(sweep_mode)], sweep_value);
+            fprintf(html_file, "<img src='ref-%s-%02x.png' title='ref-%s-%02x'> ", modeToString[int(sweep_mode)], current_value, modeToString[int(sweep_mode)], current_value);
         } else {
-            if (memcmp(reference_image, current_image, sizeof(FrameBuffer)) != 0) {
+            bool has_difference = memcmp(reference_image, current_image, sizeof(FrameBuffer)) != 0;
+            if (has_difference) {
                 char filename[128];
-                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], sweep_value);
+                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], current_value);
                 stbi_write_png(filename, 160, 144, 4, current_image, 160 * sizeof(uint32_t));
-                fprintf(html_file, "<img src='%04x-%s-%02x.png' title='%04x-%s-%02x'> ", current_address, modeToString[int(sweep_mode)], sweep_value, current_address, modeToString[int(sweep_mode)], sweep_value);
+                fprintf(html_file, "<img src='%04x-%s-%02x.png' title='%04x-%s-%02x'> ", current_address, modeToString[int(sweep_mode)], current_value, current_address, modeToString[int(sweep_mode)], current_value);
 
                 for(int idx=0; idx<160*144; idx++) {
                     uint32_t new_pixel = 0xFF000000;
@@ -331,11 +334,18 @@ public:
                     new_pixel |= abs(int(((*current_image)[idx] >> 16) & 0xFF) - int((reference_image[idx] >> 16) & 0xFF)) << 16;
                     (*current_image)[idx] = new_pixel;
                 }
-                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x-delta.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], sweep_value);
+                sprintf(filename, "output/%s-%02x.%04x-%04x/%04x-%s-%02x-delta.png", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, current_address, modeToString[int(sweep_mode)], current_value);
                 stbi_write_png(filename, 160, 144, 4, current_image, 160 * sizeof(uint32_t));
-                fprintf(html_file, "<img src='%04x-%s-%02x-delta.png' title='%04x-%s-%02x-delta'> ", current_address, modeToString[int(sweep_mode)], sweep_value, current_address, modeToString[int(sweep_mode)], sweep_value);
+                fprintf(html_file, "<img src='%04x-%s-%02x-delta.png' title='%04x-%s-%02x-delta'> ", current_address, modeToString[int(sweep_mode)], current_value, current_address, modeToString[int(sweep_mode)], current_value);
             }
-            current_address += 1;
+
+            if (has_difference && sweep_value_mode == SweepValueMode::All) {
+                current_value += 1;
+                if (current_value == sweep_value)
+                    current_address += 1;
+            } else {
+                current_address += 1;
+            }
             if (current_address == target_addr_end) {
                 run_state = RunState::Inactive;
                 fclose(html_file);
@@ -361,7 +371,7 @@ public:
             infobar.setStatus(line0, "");
             return;
         }
-        sprintf(line0, "Target: %-4s %02x:%04x-%04x %-3s %02x", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value);
+        sprintf(line0, "Target: %-4s %02x:%04x-%04x %-3s %02x %s", typeToString[int(target_type)], target_bank, target_addr_start, target_addr_end, modeToString[int(sweep_mode)], sweep_value, sweepModeToString[int(sweep_value_mode)]);
         if (!isValid())
             sprintf(line1, "Target INVALID");
         else if (!main_emulator.hasSaveState())
@@ -386,6 +396,7 @@ public:
         case CursorPos::Mode: cursor_x = 26; cursor_width = 3; break;
         case CursorPos::Value0: cursor_x = 30; break;
         case CursorPos::Value1: cursor_x = 31; break;
+        case CursorPos::ValueMode: cursor_x = 33; cursor_width = 6; break;
         }
 
         infobar.setStatus(line0, line1, cursor_x, cursor_y, cursor_width);
@@ -431,10 +442,10 @@ private:
     uint8_t applySweep(uint8_t value)
     {
         switch(sweep_mode) {
-        case SweepMode::Set: return sweep_value;
-        case SweepMode::Add: return value + sweep_value;
-        case SweepMode::Sub: return value - sweep_value;
-        case SweepMode::Xor: return value ^ sweep_value;
+        case SweepMode::Set: return current_value;
+        case SweepMode::Add: return value + current_value;
+        case SweepMode::Sub: return value - current_value;
+        case SweepMode::Xor: return value ^ current_value;
         }
         return value;
     }
@@ -456,6 +467,7 @@ private:
         case CursorPos::Mode: return int(sweep_mode);
         case CursorPos::Value0: return (sweep_value >> 4) & 0x0F;
         case CursorPos::Value1: return (sweep_value >> 0) & 0x0F;
+        case CursorPos::ValueMode: return int(sweep_value_mode);
         }
         return 0;
     }
@@ -477,6 +489,7 @@ private:
         case CursorPos::Mode: while(value < int(SweepMode::Set)) value += 4; while(value > int(SweepMode::Xor)) value -= 4; sweep_mode = SweepMode(value); break;
         case CursorPos::Value0: sweep_value = (sweep_value & 0x0F) | ((value & 0x0F) << 4); break;
         case CursorPos::Value1: sweep_value = (sweep_value & 0xF0) | ((value & 0x0F) << 0); break;
+        case CursorPos::ValueMode: while(value < int(SweepValueMode::Single)) value += 2; while(value > int(SweepValueMode::All)) value -= 2; sweep_value_mode = SweepValueMode(value); break;
         }
     }
 
@@ -499,7 +512,8 @@ private:
         Start0, Start1, Start2, Start3,
         End0, End1, End2, End3,
         Mode,
-        Value0, Value1
+        Value0, Value1,
+        ValueMode,
     } cursor_pos = CursorPos::Type;
     enum class SweepMode
     {
@@ -509,7 +523,11 @@ private:
         Xor
     } sweep_mode = SweepMode::Add;
     uint8_t sweep_value = 1;
-
+    enum class SweepValueMode
+    {
+        Single,
+        All,
+    } sweep_value_mode = SweepValueMode::Single;
 
     enum class RunState{
         Inactive,
@@ -517,10 +535,12 @@ private:
         Sweeping
     } run_state = RunState::Inactive;
     int current_address = 0;
+    int current_value = 0;
     FILE* html_file = nullptr;
 
     static constexpr const char* typeToString[3] = {"ROM", "WRAM", "HRAM"};
     static constexpr const char* modeToString[4] = {"SET", "ADD", "SUB", "XOR"};
+    static constexpr const char* sweepModeToString[2] = {"SINGLE", "ALL"};
 };
 
 void printusage(const char* app)
