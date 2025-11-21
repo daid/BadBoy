@@ -19,7 +19,7 @@ class InfoBar
 public:
     InfoBar()
     {
-        backbuffer = SDL_CreateRGBSurface(0, SCREEN_WIDTH, 16, 32, 0, 0, 0, 0);
+        backbuffer = SDL_CreateRGBSurface(0, SCREEN_WIDTH, 16, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0);
         SDL_LockSurface(backbuffer);
     }
 
@@ -119,11 +119,11 @@ public:
         }
         init.audio_frequency = 44100;
         init.audio_frames = 2048;
-        init.builtin_palette = 83;
+        init.builtin_palette = 80;
         init.cgb_color_curve = CGB_COLOR_CURVE_SAMEBOY_EMULATE_HARDWARE;
         emu = emulator_new(&init);
 
-        backbuffer = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32, 0, 0, 0, 0);
+        backbuffer = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0);
 
         SDL_AudioSpec desired = {0};
         desired.channels = 2;
@@ -233,7 +233,7 @@ public:
             return;
         }
 
-        backbuffer = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32, 0, 0, 0, 0);
+        backbuffer = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0);
     }
 
     void handleKey(SDL_Keycode key, bool down)
@@ -279,7 +279,7 @@ public:
         init.rom.size = base_rom_file.size;
         init.audio_frequency = 44100;
         init.audio_frames = 2048;
-        init.builtin_palette = 83;
+        init.builtin_palette = 80;
         init.cgb_color_curve = CGB_COLOR_CURVE_SAMEBOY_EMULATE_HARDWARE;
         auto emu = emulator_new(&init);
         auto save_state = main_emulator.getSaveState();
