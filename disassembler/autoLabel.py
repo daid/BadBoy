@@ -43,6 +43,7 @@ class RelativeLabel:
         self.target = target
         
         memory.addLabel(address, self)
+        memory.addAutoLabel(target, None, "data")
 
     def __str__(self):
         label = str(self.memory.getLabel(self.target))
