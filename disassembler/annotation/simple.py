@@ -15,7 +15,7 @@ def code(memory, addr):
 def data(memory, addr, *, format, amount=1):
     DataBlock(memory, addr, format=format, amount=int(amount) if amount is not None else None);
 
-@annotation
+@annotation(priority=99)
 def jumptable(memory, addr, *, amount=None, label=None, bank=None):
     JumpTable(memory, addr, amount=int(amount) if amount is not None else None, bank=int(bank) if bank is not None else None)
 
@@ -46,7 +46,8 @@ def jumptablefunction(memory, addr):
 
 class JumpTableFunction(CodeBlock):
     def onCall(self, from_memory, from_address, next_addr):
-        JumpTable(from_memory, next_addr)
+        if not from_memory[next_addr]:
+            JumpTable(from_memory, next_addr)
 
 @annotation(priority=90)
 def noreturn(memory, addr):
