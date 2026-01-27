@@ -43,9 +43,10 @@ class RelativeLabel:
         self.target = target
         
         memory.addLabel(address, self)
-        memory.addAutoLabel(target, None, "data")
 
     def __str__(self):
+        if self.memory.getLabel(self.target) is None:
+            self.memory.addAutoLabel(self.target, None, "data")
         label = str(self.memory.getLabel(self.target))
         offset = self.address - self.target
         if offset < 0:
