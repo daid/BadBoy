@@ -9,31 +9,77 @@ from autoLabel import RelativeLabel
 
 @annotation
 def code(memory, addr):
+    """
+        Mark a section of the disassembly as code. This will automatically mark anything called by this code as code as well.
+    """
     CodeBlock(memory, addr)
 
 @annotation
 def data(memory, addr, *, format, amount=1):
+    """
+        Mark a section of the disassembly as a data table.
+
+        The format specifies how this data is formatted. Which each letter being a type:
+           b: byte
+           w: word, 16bit little endian
+           p: pointer, 16bit little endian, automatically adds a label at the target
+           W: word, 16bit big endian
+           P: pointer, 16bit big endian, automatically adds a label at the target
+        
+        Example:
+            ;@data format=bbwp amount=2
+        
+        The amount specifies how many rows this data table has.
+    """
     DataBlock(memory, addr, format=format, amount=int(amount) if amount is not None else None);
 
 @annotation(priority=99)
 def jumptable(memory, addr, *, amount=None, label=None, bank=None):
+    """
+        Mark a jump table, which is a list of pointers to code.
+
+        The amount specifies how large the table is, else the table will be extended as long as it can be.
+
+        Label is optionally a prefix for the generated labels.
+        Bank is optionally a bank to which these pointers point if they are pointers to a different bank.
+    """
     JumpTable(memory, addr, amount=int(amount) if amount is not None else None, bank=int(bank) if bank is not None else None)
 
 @annotation(priority=10)
 def bank(memory, addr, bank_nr, size=1):
+    """
+        Specify the bank for this instruction.
+
+        Example:
+            call func_02_4000 ;@bank 2
+    """
     for n in range(int(size)):
         memory.setActiveRomBankAt(addr + n, int(bank_nr))
 
 @annotation
 def string(memory, addr, *, size=None):
+    """
+        Mark this data as an ascii string.
+
+        Optionally specify the size to not stop at the first $00 byte.
+    """
     StringBlock(memory, addr, size=int(size) if size is not None else None)
 
 @annotation
 def gfx(memory, addr):
+    """
+        Mark the next 16 bytes as a graphics tile.
+        This is generated inline with dw `xxxxxxxx lines
+    """
     GfxBlock(memory, addr, bpp=2, size=8)
 
 @annotation
 def gfximg(memory, addr, name, width, height):
+    """
+        Mark data as raw graphics in an png file.
+
+        The name is the filename of the graphics. Width and height are in 8x8 tiles.
+    """
     width = int(width)
     height = int(height)
     GfxImageBlock(memory, addr, name=name, width=width, height=height)
@@ -42,7 +88,17 @@ def gfximg(memory, addr, name, width, height):
 
 @annotation
 def jumptablefunction(memory, addr):
+    """
+        Mark a function as a jump table function.
+
+        This causes any code tracing that encounters this function to stop at the call and expects a jump table directly after a call to this function.
+        This is a common construct in many roms, but by no means a guarantee.
+
+        Warning: Using this can cause some problems with the auto-detected jumptables being longer then intended.
+        Mark those jumptables manually with ";@jumptable amount=X" as a workaround
+    """
     JumpTableFunction(memory, addr)
+
 
 class JumpTableFunction(CodeBlock):
     def onCall(self, from_memory, from_address, next_addr):
@@ -51,6 +107,9 @@ class JumpTableFunction(CodeBlock):
 
 @annotation(priority=90)
 def noreturn(memory, addr):
+    """
+        Mark a function as non-returning. Any call to this function won't trace code after it.
+    """
     NoReturnFunction(memory, addr)
 
 class NoReturnFunction(CodeBlock):

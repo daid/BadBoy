@@ -5,10 +5,19 @@ from romInfo import RomInfo
 
 @annotation
 def sdccFarcall(memory, addr):
+    """
+        The sdcc compiler has a specific construct for calling functions in different banks.
+        This annotation automatically handles those calls after this function is marked.
+        [TODO: Is this sdcc version specific?]
+    """
     SdccFarcallCodeBlock(memory, addr)
 
 @annotation
 def sdccRLEInit(memory, addr):
+    """
+        When disassembling sdcc code, there generally is an RLE initialization block.
+        This annotation decode this.
+    """
     SdccRLEInitCodeBlock(memory, addr)
 
 
