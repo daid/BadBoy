@@ -47,7 +47,7 @@ class RelativeLabel:
     def __str__(self):
         label = self.memory.getLabel(self.target)
         if label is None:
-            label = f"${self.address}"
+            label = f"${self.target:x}"
         else:
             label = str(label)
         offset = self.address - self.target
