@@ -1,6 +1,6 @@
 import os
 from memory.rom import RomMemory
-from memory.ram import WRamMemory
+from memory.ram import WRamMemoryBanked
 
 
 class AssemblyFile:
@@ -49,6 +49,10 @@ class AssemblyFile:
             else:
                 self.__file.write("SECTION \"%s\", ROMX[$%04x], BANK[$%02x]\n" % (sectionname, self.addr, self.__memory.bankNumber))
             self.__addr_prefix = "%02x:" % (self.__memory.bankNumber)
+        elif isinstance(self.__memory, WRamMemoryBanked) and self.__memory.bankNumber != 0:
+            if addr is None:
+                self.__file.write("SECTION \"wram%01x\", WRAMX[$%04x], BANK[$%01x]\n" % (self.__memory.bankNumber, self.__memory.base_address, self.__memory.bankNumber))
+            self.__addr_prefix = ""
         else:
             if addr is None:
                 self.__file.write("SECTION \"%s\", %s[$%04x]\n" % (self.__memory.type.lower(), self.__memory.type.upper(), self.__memory.base_address))
