@@ -13,9 +13,10 @@ from annotation.simple import DataBlock
 
 
 class Disassembler:
-    def __init__(self, rom):
+    def __init__(self, rom, wram_banks):
         self.__rom = rom
-        RomInfo.init(rom)
+        self.wram_banks = wram_banks
+        RomInfo.init(rom, wram_banks)
 
     def readSources(self, path):
         if os.path.exists(os.path.join(path, "src")):
@@ -97,7 +98,10 @@ class Disassembler:
         self.__exportRam(f, RomInfo.getHRam())
         self.__exportRam(f, RomInfo.getVRam())
         self.__exportRam(f, RomInfo.getSRam())
-        
+        for wramBankNum in range(1, self.wram_banks):
+            wramBankFile = AssemblyFile(path, os.path.join("src", "memory%01X.asm" % wramBankNum))
+            self.__exportRam(wramBankFile, RomInfo.getWRam(wramBankNum))
+
         os.makedirs(os.path.join(path, "src", "include"), exist_ok=True)
         macro_file = open(os.path.join(path, "src", "include", "macros.inc"), "wt")
         for macro, contents in sorted(RomInfo.macros.items()):

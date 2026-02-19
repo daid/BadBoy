@@ -2,6 +2,7 @@ from memory.rom import RomMemory
 from memory.ram import VRamMemory
 from memory.ram import SRamMemory
 from memory.ram import WRamMemory
+from memory.ram import WRamMemoryBanked
 from memory.ram import HRamMemory
 from memory.ram import OAMMemory
 from memory.io import IOMemory
@@ -11,11 +12,11 @@ from memory.io import IERegMemory
 
 class RomInfo:
     @classmethod
-    def init(self, rom):
+    def init(self, rom, wram_banks):
         self.__rom_banks = [RomMemory(rom, bank) for bank in range(rom.bankCount())]
         self.__vram = VRamMemory()
         self.__sram = SRamMemory()
-        self.__wram = WRamMemory()
+        self.__wram = [WRamMemory()] if wram_banks == 1 else [WRamMemoryBanked(n) for n in range(wram_banks)]  
         self.__hram = HRamMemory()
         self.__oam = OAMMemory()
         self.__io = IOMemory()
@@ -37,8 +38,8 @@ class RomInfo:
         return self.__rom_banks[index]
     
     @classmethod
-    def getWRam(self):
-        return self.__wram
+    def getWRam(self, bankNum=0):
+        return self.__wram[bankNum]
 
     @classmethod
     def getHRam(self):
@@ -64,8 +65,11 @@ class RomInfo:
             return self.__vram
         if addr < 0xC000:
             return self.__sram
+        if addr < 0xD000:
+            return self.__wram[0]
         if addr < 0xE000:
-            return self.__wram
+            # Currently this always assumes WRAM bank 1 is active when using banked WRAM. 
+            return self.__wram[1] if len(self.__wram) > 1 else self.__wram[0]
         if addr < 0xFE00:
             return None
         if addr < 0xFEA0:
