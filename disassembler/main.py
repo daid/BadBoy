@@ -18,6 +18,7 @@ from annotation import sdcc
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("rom", type=str, nargs="?")
+    parser.add_argument("--wram-banks", type=int, default=1)
     parser.add_argument("--instrumentation", action='append', default=[])
     parser.add_argument("--source")
     parser.add_argument("--output", type=str, required=False)
@@ -67,7 +68,7 @@ if __name__ == "__main__":
 
     if args.rom:
         rom = ROM(args.rom)
-        disassembler = Disassembler(rom)
+        disassembler = Disassembler(rom, args.wram_banks)
         disassembler.readSources(args.source if args.source else args.output)
         for instrumentation_file in args.instrumentation:
             processInstrumentation(instrumentation_file)

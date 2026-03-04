@@ -27,11 +27,19 @@ class WRamMemory(Memory):
 
 class WRamMemoryBanked(Memory):
     def __init__(self, bank):
-        super().__init__("wram0" if bank == 0 else "wramx", 0x1000, base_address=0xC000 + bank * 0x1000)
+        super().__init__("wram0" if bank == 0 else "wramx", 0x1000, base_address=0xC000 if bank == 0 else 0xD000)
+        self.__bank = bank
+
+    @property
+    def bankNumber(self):
+        return self.__bank
 
     def addAutoLabel(self, addr, source, type):
         if self.getLabel(addr) == None:
-            self.addLabel(addr, "w%04X" % (addr))
+            if self.__bank == 0:
+                self.addLabel(addr, "w%04X" % (addr))
+            else:
+                self.addLabel(addr, "w%01X_%04X" % (self.__bank, addr))
 
 class OAMMemory(Memory):
     def __init__(self):

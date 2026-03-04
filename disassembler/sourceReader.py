@@ -49,6 +49,9 @@ class SourceReader:
             self.__memory = RomInfo.romBank(bank_nr)
         elif section_type == "WRAM0":
             self.__memory = RomInfo.getWRam()
+        elif section_type == "WRAMX":
+            wram_bank_nr = int(re.search(r"BANK\[\$([0-9a-f]+)\]", line.strip().split(",")[2]).group(1), 16)
+            self.__memory = RomInfo.getWRam(wram_bank_nr)
         elif section_type == "SRAM":
             self.__memory = RomInfo.getSRam()
         elif section_type == "HRAM":
