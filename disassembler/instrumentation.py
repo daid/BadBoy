@@ -22,8 +22,9 @@ MARK_BANK_SHIFT = (48)
 MARK_BANK_MASK = (0xFFF << 48)
 
 
-def processInstrumentation(filename):
+def processInstrumentation(filename, ignore_banks_string):
     f = open(filename, "rb")
+    banks_to_ignore = [int(bank, 16) for bank in ignore_banks_string.split(',')]
     while True:
         data = f.read(16)
         if not data:
@@ -32,6 +33,8 @@ def processInstrumentation(filename):
         if (source & ID_MASK) == ID_ROM:
             addr = source & 0x3FFF
             bank = (source >> 14) & 0x3FF
+            if bank in banks_to_ignore:
+                continue
             if bank > 0:
                 addr |= 0x4000
             
