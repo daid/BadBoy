@@ -4,6 +4,7 @@ import os
 import inspect
 import textwrap
 import itertools
+import sys
 
 from rom import ROM
 from disassembler import Disassembler
@@ -32,12 +33,10 @@ if __name__ == "__main__":
 
     for plugin in args.plugin:
         if os.path.isdir(plugin):
+            sys.path.append(plugin)
             for f in sorted(os.listdir(plugin)):
                 if f.endswith(".py"):
-                    f = os.path.join(plugin, f)
-                    spec = importlib.util.spec_from_file_location("plugin", f)
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
+                    importlib.import_module(f[:-3])
         else:
             spec = importlib.util.spec_from_file_location("plugin", plugin)
             if spec:
