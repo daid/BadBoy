@@ -54,7 +54,7 @@ class RomInfo:
         return self.__sram
 
     @classmethod
-    def memoryAt(self, addr, active_rom_bank=None):
+    def memoryAt(self, addr, active_rom_bank=None, active_wram_bank=None):
         if addr < 0x4000:
             return self.__rom_banks[0]
         if addr < 0x8000:
@@ -68,8 +68,9 @@ class RomInfo:
         if addr < 0xD000:
             return self.__wram[0]
         if addr < 0xE000:
-            # Currently this always assumes WRAM bank 1 is active when using banked WRAM. 
-            return self.__wram[1] if len(self.__wram) > 1 else self.__wram[0]
+            if len(self.__wram) == 1: # WRAM is not banked
+                return self.__wram[0]
+            return active_wram_bank or self.__wram[1]
         if addr < 0xFE00:
             return None
         if addr < 0xFEA0:
