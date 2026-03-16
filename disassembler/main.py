@@ -21,6 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("rom", type=str, nargs="?")
     parser.add_argument("--wram-banks", type=int, default=1)
     parser.add_argument("--instrumentation", action='append', default=[])
+    parser.add_argument("--instrumentation-ignore-banks", default="")
     parser.add_argument("--source")
     parser.add_argument("--output", type=str, required=False)
     parser.add_argument("--plugin", action='append', default=[])
@@ -70,7 +71,7 @@ if __name__ == "__main__":
         disassembler = Disassembler(rom, args.wram_banks)
         disassembler.readSources(args.source if args.source else args.output)
         for instrumentation_file in args.instrumentation:
-            processInstrumentation(instrumentation_file)
+            processInstrumentation(instrumentation_file, args.instrumentation_ignore_banks)
         disassembler.processRom()
         if args.output:
             disassembler.export(args.output)
