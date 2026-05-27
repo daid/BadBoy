@@ -106,8 +106,19 @@ int main(int argc, char** argv)
     const char* screenshot = nullptr;
     uint32_t max_cycles = 0;
 
+    if (argc > 1 && argv[1][0] != '-') {
+        rom_file = argv[1];
+        optind = 2;
+    }
+
+#ifndef __GLIBC__
+    const char* getopt_opts = "o:r:pe:s:c:S:";
+#else
+    const char* getopt_opts = "-o:r:pe:s:c:S:";
+#endif
+
     int c;
-    while((c = getopt(argc, argv, "-o:r:pe:s:c:S:")) != -1)
+    while((c = getopt(argc, argv, getopt_opts)) != -1)
     {
         switch(c)
         {

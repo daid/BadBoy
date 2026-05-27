@@ -32,3 +32,22 @@
 *.app
 
 __pycache__
+
+# ROM files
+*.gb
+*.gbc
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+emulator/Makefile
+sweep-emu/Makefile
+
+# Project binaries
+emulator/BadBoy
+sweep-emu/SweepEmu
+
+# Other generated files
+output/
