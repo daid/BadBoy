@@ -24,7 +24,10 @@ MARK_BANK_MASK = (0xFFF << 48)
 
 def processInstrumentation(filename, ignore_banks_string):
     f = open(filename, "rb")
-    banks_to_ignore = [int(bank, 16) for bank in ignore_banks_string.split(',')]
+    if ignore_banks_string:
+        banks_to_ignore = [int(bank, 16) for bank in ignore_banks_string.split(',')]
+    else:
+        banks_to_ignore = []
     while True:
         data = f.read(16)
         if not data:
